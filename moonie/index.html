@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOONIE – Moon Base Survival</title>
+<style>
+:root{--ink:#2b2350;--cream:#fdf0ec;--lav:#b9a6ee;--pink:#f58aa6;--green:#5fcf8a;--yellow:#ffc83d;--red:#ef4b4b;--blue:#5aa9f0}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1c1638;overflow:hidden;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ink)}
+body{display:flex;align-items:center;justify-content:center}
+#stage{--u:calc(min(100vw,177.78vh)/100);position:relative;width:calc(var(--u)*100);height:calc(var(--u)*56.25);overflow:hidden;font-size:calc(var(--u)*1.6);background:radial-gradient(circle at 50% 30%,#6f5bb8,#3a2f73 70%)}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#layer,#hud,#modal{position:absolute;inset:0}
+#hud{pointer-events:none}
+button{font-family:inherit;color:inherit;cursor:pointer}
+/* HUD */
+.hudbar{position:absolute;left:12.4%;top:1.3%;width:75.2%;height:9.8%;background:var(--cream);border:calc(var(--u)*0.35) solid var(--ink);border-radius:calc(var(--u)*5);display:flex;align-items:center;justify-content:space-around;padding:0 calc(var(--u)*1.5);pointer-events:auto;box-shadow:0 calc(var(--u)*0.3) 0 rgba(43,35,80,.25)}
+.hi{display:flex;align-items:center;gap:calc(var(--u)*0.7);background:none;border:0;font-size:calc(var(--u)*1.9);font-weight:800;padding:calc(var(--u)*0.3) calc(var(--u)*0.6);border-radius:calc(var(--u)*2);white-space:nowrap}
+.hi:hover{background:rgba(185,166,238,.35)}
+.hi svg{width:calc(var(--u)*2.8);height:calc(var(--u)*2.8)}
+.hi small{font-size:calc(var(--u)*1.2);font-weight:700;opacity:.6}
+.hi.low{color:var(--red);animation:pulse 1s infinite}
+.sep{width:calc(var(--u)*0.2);height:calc(var(--u)*4.5);background:rgba(43,35,80,.2)}
+.hearts{display:flex;gap:calc(var(--u)*0.4);pointer-events:auto;background:none;border:0}
+.hearts svg{width:calc(var(--u)*3.4);height:calc(var(--u)*3.4)}
+.hearts .gone{filter:grayscale(1) opacity(.35)}
+.hearts .lost{animation:shake .5s}
+/* hub */
+.hot{position:absolute;border:0;background:transparent;border-radius:50%;transition:.15s}
+.hot:hover,.hot:focus-visible{box-shadow:0 0 0 calc(var(--u)*0.5) rgba(255,255,255,.8),0 0 calc(var(--u)*3) calc(var(--u)*0.5) rgba(255,255,255,.6);transform:scale(1.04);outline:none}
+.hot.alert{animation:ring 1s infinite}
+.pill{position:absolute;transform:translate(-50%,-50%);min-width:calc(var(--u)*8);padding:calc(var(--u)*0.35) calc(var(--u)*1);text-align:center;font-size:calc(var(--u)*1.25);font-weight:900;letter-spacing:.05em;border-radius:calc(var(--u)*3);border:calc(var(--u)*0.25) solid var(--ink);background:#ddd;pointer-events:none}
+.pill.off{background:#d8d3e6;color:#6b6489}.pill.low{background:var(--yellow)}.pill.high{background:var(--green)}.pill.alert{background:var(--red);color:#fff;animation:pulse .8s infinite}.pill.ready{background:var(--green)}.pill.quiet{background:#cfe9ff}
+.nextday{position:absolute;left:41.4%;top:67.2%;width:17.2%;height:27.8%;border-radius:50%;border:calc(var(--u)*0.4) solid var(--ink);background:radial-gradient(circle at 50% 30%,#ffd1e0,#e9a6f5);font-weight:900;font-size:calc(var(--u)*2.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*0.3);box-shadow:0 calc(var(--u)*0.6) 0 rgba(43,35,80,.3);transition:.15s}
+.nextday small{font-size:calc(var(--u)*1.4);font-weight:700;opacity:.75}
+.nextday:hover{transform:scale(1.05)}
+.credit{position:absolute;left:calc(var(--u)*1.2);bottom:calc(var(--u)*1);font-size:calc(var(--u)*1.15);font-weight:700;background:rgba(253,240,236,.85);border-radius:calc(var(--u)*2);padding:calc(var(--u)*0.4) calc(var(--u)*1.2);border:calc(var(--u)*0.2) solid var(--ink)}
+.alertbadge{position:absolute;left:50%;top:12.5%;transform:translateX(-50%);background:var(--red);color:#fff;font-weight:900;font-size:calc(var(--u)*1.8);padding:calc(var(--u)*0.6) calc(var(--u)*2.2);border-radius:calc(var(--u)*3);border:calc(var(--u)*0.3) solid var(--ink);animation:pulse 1s infinite;pointer-events:none}
+/* rooms */
+.back{position:absolute;left:calc(var(--u)*1.5);top:calc(var(--u)*12.6);z-index:5;background:var(--cream);border:calc(var(--u)*0.3) solid var(--ink);border-radius:calc(var(--u)*3);padding:calc(var(--u)*0.6) calc(var(--u)*2);font-size:calc(var(--u)*1.7);font-weight:900}
+.back:hover{background:#fff}
+.panel{position:absolute;left:2%;right:2%;bottom:2.5%;background:rgba(253,240,236,.96);border:calc(var(--u)*0.35) solid var(--ink);border-radius:calc(var(--u)*2.5);padding:calc(var(--u)*1.4) calc(var(--u)*2) calc(var(--u)*1.4) calc(var(--u)*15);display:flex;gap:calc(var(--u)*2.5);align-items:stretch;min-height:calc(var(--u)*13);box-shadow:0 calc(var(--u)*0.6) 0 rgba(43,35,80,.3)}
+.guide{position:absolute;left:calc(var(--u)*1);bottom:calc(var(--u)*0.6);height:calc(var(--u)*21);filter:drop-shadow(0 calc(var(--u)*0.3) 0 rgba(43,35,80,.25));pointer-events:none;animation:bob 3s ease-in-out infinite}
+.ptxt{flex:0 0 26%}
+.ptxt h2{margin:0 0 calc(var(--u)*0.5);font-size:calc(var(--u)*2.4)}
+.ptxt p{margin:0;font-size:calc(var(--u)*1.45);line-height:1.35}
+.pctl{flex:1;display:flex;flex-direction:column;gap:calc(var(--u)*0.9);justify-content:center}
+.choices{display:flex;gap:calc(var(--u)*1)}
+.ch{flex:1;border:calc(var(--u)*0.3) solid var(--ink);border-radius:calc(var(--u)*1.6);background:#fff;padding:calc(var(--u)*0.7) calc(var(--u)*0.5);text-align:center;line-height:1.25;transition:.12s}
+.ch b{display:block;font-size:calc(var(--u)*1.9)}
+.ch span{display:block;font-size:calc(var(--u)*1.2);font-weight:700}
+.ch:hover:not(:disabled){transform:translateY(calc(var(--u)*-0.2));background:#f4ecff}
+.ch.sel{background:var(--lav);box-shadow:inset 0 0 0 calc(var(--u)*0.25) var(--ink)}
+.ch:disabled{opacity:.4;cursor:not-allowed}
+.ch.shake{animation:shake .4s}
+.net{font-size:calc(var(--u)*1.4);font-weight:800;display:flex;gap:calc(var(--u)*2);flex-wrap:wrap}
+.net .bad{color:var(--red)}.net .ok{color:#1f8f55}
+.rowlabel{font-size:calc(var(--u)*1.3);font-weight:900;margin-right:calc(var(--u)*0.8);align-self:center;min-width:calc(var(--u)*11)}
+.row{display:flex;gap:calc(var(--u)*0.8);align-items:stretch}
+.row .ch{padding:calc(var(--u)*0.3) calc(var(--u)*0.4)}.row .ch b{font-size:calc(var(--u)*1.5);display:inline}.row .ch span{display:inline;margin-left:calc(var(--u)*0.5)}
+.alloc{display:flex;height:calc(var(--u)*3);border:calc(var(--u)*0.25) solid var(--ink);border-radius:calc(var(--u)*1.5);overflow:hidden;background:#fff}
+.alloc div{display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*1.1);font-weight:900;white-space:nowrap;overflow:hidden}
+.legend{display:flex;gap:calc(var(--u)*1.4);font-size:calc(var(--u)*1.15);font-weight:700;flex-wrap:wrap}
+.legend i{display:inline-block;width:calc(var(--u)*1.2);height:calc(var(--u)*1.2);border-radius:50%;border:calc(var(--u)*0.15) solid var(--ink);margin-right:calc(var(--u)*0.4);vertical-align:calc(var(--u)*-0.1)}
+.chips{display:flex;gap:calc(var(--u)*0.8);flex-wrap:wrap;align-items:center}
+.chip{background:#fff;border:calc(var(--u)*0.25) solid var(--ink);border-radius:calc(var(--u)*2);padding:calc(var(--u)*0.3) calc(var(--u)*1.2);font-size:calc(var(--u)*1.3);font-weight:800}
+.chip.bad{background:#ffd9d9}
+.btn{border:calc(var(--u)*0.3) solid var(--ink);background:var(--yellow);border-radius:calc(var(--u)*2);padding:calc(var(--u)*0.8) calc(var(--u)*2.4);font-size:calc(var(--u)*1.7);font-weight:900;box-shadow:0 calc(var(--u)*0.3) 0 var(--ink);transition:.1s}
+.btn:hover{transform:translateY(calc(var(--u)*-0.15))}.btn:active{transform:translateY(calc(var(--u)*0.2));box-shadow:none}
+.btn.big{font-size:calc(var(--u)*2);padding:calc(var(--u)*1) calc(var(--u)*3)}
+.btn.green{background:var(--green)}.btn.red{background:var(--red);color:#fff}.btn.grey{background:#ddd}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.evinfo{font-size:calc(var(--u)*1.35);line-height:1.4;background:#fff;border:calc(var(--u)*0.25) solid var(--ink);border-radius:calc(var(--u)*1.5);padding:calc(var(--u)*0.6) calc(var(--u)*1.2)}
+.evinfo b{font-weight:900}
+.tag{display:inline-block;background:var(--blue);color:#fff;border-radius:calc(var(--u)*2);padding:calc(var(--u)*0.1) calc(var(--u)*1);font-size:calc(var(--u)*1.1);font-weight:900;margin-right:calc(var(--u)*0.5)}
+/* modal */
+#modal:empty{display:none}
+.mback{position:absolute;inset:0;background:rgba(28,22,56,.65);display:flex;align-items:center;justify-content:center;z-index:20;animation:fade .2s}
+.card{position:relative;width:calc(var(--u)*62);max-height:calc(var(--u)*50);overflow:auto;background:var(--cream);border:calc(var(--u)*0.45) solid var(--ink);border-radius:calc(var(--u)*3);padding:calc(var(--u)*2.4) calc(var(--u)*3) calc(var(--u)*2.4) calc(var(--u)*3);box-shadow:0 calc(var(--u)*1) 0 rgba(43,35,80,.35);animation:pop .25s;display:flex;gap:calc(var(--u)*2.5);align-items:center}
+.card.hasg{padding-left:calc(var(--u)*3)}
+.mg{height:calc(var(--u)*19);flex:0 0 auto;animation:bob 3s ease-in-out infinite}
+.mbody{flex:1}
+.mbody h2{margin:0 0 calc(var(--u)*1);font-size:calc(var(--u)*3)}
+.mbody p{margin:0 0 calc(var(--u)*1);font-size:calc(var(--u)*1.8);line-height:1.45}
+.mbtns{display:flex;gap:calc(var(--u)*1.2);margin-top:calc(var(--u)*1.6);flex-wrap:wrap}
+.card.red{background:#ffe7e7}.card.green{background:#e6fbee}
+.rep{width:100%;border-collapse:collapse;font-size:calc(var(--u)*1.7);margin-bottom:calc(var(--u)*1)}
+.rep td{padding:calc(var(--u)*0.35) calc(var(--u)*0.5);border-bottom:calc(var(--u)*0.15) dashed rgba(43,35,80,.25)}
+.rep td:last-child{text-align:right;font-weight:900}
+.up{color:#1f8f55}.down{color:var(--red)}
+.note{font-size:calc(var(--u)*1.55);line-height:1.4;padding:calc(var(--u)*0.7) calc(var(--u)*1.2);border-radius:calc(var(--u)*1.5);margin:calc(var(--u)*0.6) 0;border:calc(var(--u)*0.2) solid var(--ink)}
+.note.bad{background:#ffd9d9}.note.good{background:#d9f7e4}.note.warn{background:#fff1c2}.note.info{background:#e3ecff}
+.note small{display:block;font-size:calc(var(--u)*1.15);opacity:.75;margin-top:calc(var(--u)*0.3)}
+/* intro / end */
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*4);padding:calc(var(--u)*4)}
+.center img{height:calc(var(--u)*46);animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 calc(var(--u)*1) 0 rgba(0,0,0,.25))}
+.bubble{width:calc(var(--u)*50);background:var(--cream);border:calc(var(--u)*0.45) solid var(--ink);border-radius:calc(var(--u)*3);padding:calc(var(--u)*3);box-shadow:0 calc(var(--u)*1) 0 rgba(0,0,0,.3)}
+.bubble h1{margin:0 0 calc(var(--u)*1);font-size:calc(var(--u)*6);letter-spacing:.08em}
+.bubble h2{margin:0 0 calc(var(--u)*1);font-size:calc(var(--u)*3.6)}
+.bubble p{font-size:calc(var(--u)*2);line-height:1.45;margin:0 0 calc(var(--u)*1)}
+.bubble ul{font-size:calc(var(--u)*1.7);line-height:1.4;padding-left:calc(var(--u)*2.4);margin:calc(var(--u)*0.5) 0 calc(var(--u)*1)}
+.dots{display:flex;gap:calc(var(--u)*0.8);margin:calc(var(--u)*1.4) 0}
+.dots i{width:calc(var(--u)*1.2);height:calc(var(--u)*1.2);border-radius:50%;background:#cbbfe9;border:calc(var(--u)*0.15) solid var(--ink)}.dots i.on{background:var(--ink)}
+.small{font-size:calc(var(--u)*1.25);opacity:.7;margin-top:calc(var(--u)*1.4)}
+.stars{position:absolute;inset:0;background-image:radial-gradient(#fff calc(var(--u)*0.12),transparent calc(var(--u)*0.15)),radial-gradient(#ffe9a8 calc(var(--u)*0.1),transparent calc(var(--u)*0.13));background-size:calc(var(--u)*9) calc(var(--u)*7),calc(var(--u)*13) calc(var(--u)*11);background-position:0 0,calc(var(--u)*3) calc(var(--u)*2);opacity:.5}
+@keyframes pulse{50%{opacity:.55}}
+@keyframes ring{50%{box-shadow:0 0 0 calc(var(--u)*0.9) rgba(239,75,75,.9),0 0 calc(var(--u)*4) calc(var(--u)*1) rgba(239,75,75,.7)}}
+@keyframes shake{25%{transform:translateX(calc(var(--u)*-0.5))}75%{transform:translateX(calc(var(--u)*0.5))}}
+@keyframes bob{50%{transform:translateY(calc(var(--u)*-0.7))}}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+@keyframes fade{from{opacity:0}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="bg" alt="">
+  <div id="layer"></div>
+  <div id="hud"></div>
+  <div id="modal"></div>
+</div>
+
+<script type="application/json" id="cfg-embedded">{
+  "note": "Game balance values chosen by our team for gameplay. Not NASA data except where a source is named. First-guess numbers: tune them while playtesting.",
+  "game": {
+    "title": "MOONIE",
+    "location": "moon",
+    "days_to_survive": 5,
+    "crew_size": 1,
+    "start_hearts": 3,
+    "max_hearts": 3
+  },
+  "resources": {
+    "oxygen": {
+      "label": "Oxygen",
+      "unit": "kg",
+      "start": 3.0,
+      "max": 6.0,
+      "daily_use": 0.8,
+      "low_warning_below": 1.5,
+      "source": "Daily use based on NASA life-support planning values (about 0.8 kg per person per day). Verify before presenting."
+    },
+    "water": {
+      "label": "Water",
+      "unit": "L",
+      "start": 14.0,
+      "max": 14.0,
+      "daily_use": 2.5,
+      "daily_recovered": 0.5,
+      "low_warning_below": 4.0,
+      "source": "Daily use based on NASA's minimum drinking water value (2.5 L per person per day). Recovery is a game number."
+    },
+    "food": {
+      "label": "Food",
+      "unit": "kg",
+      "start": 4.5,
+      "max": 8.0,
+      "daily_use": 1.2,
+      "low_warning_below": 2.0,
+      "source": "Game number."
+    },
+    "power": {
+      "label": "Power",
+      "unit": "kWh",
+      "daily_budget": 120,
+      "baseline_use": 20,
+      "carry_over": false,
+      "source": "Game number. Unused power is lost at the end of the day."
+    }
+  },
+  "rooms": {
+    "oxygen_room": {
+      "label": "Oxygen Room",
+      "levels": {
+        "off": {
+          "power_kwh": 0,
+          "oxygen_kg": 0.0
+        },
+        "low": {
+          "power_kwh": 30,
+          "oxygen_kg": 0.4
+        },
+        "high": {
+          "power_kwh": 60,
+          "oxygen_kg": 0.8
+        }
+      }
+    },
+    "greenhouse": {
+      "label": "Greenhouse",
+      "levels": {
+        "off": {
+          "power_kwh": 0,
+          "food_kg": 0.0,
+          "water_l": 0.0
+        },
+        "low": {
+          "power_kwh": 25,
+          "food_kg": 0.5,
+          "water_l": 1.0
+        },
+        "high": {
+          "power_kwh": 50,
+          "food_kg": 1.0,
+          "water_l": 2.0
+        }
+      }
+    },
+    "power_room": {
+      "label": "Power Room",
+      "job": "Player splits the daily power budget between rooms here."
+    },
+    "radiation_shelter": {
+      "label": "Radiation Shelter",
+      "prepare_cost_kwh": 40
+    }
+  },
+  "radiation": {
+    "events_file": "solar-events.json",
+    "emergency_day_min": 2,
+    "emergency_day_max": 4,
+    "emergencies_per_game": 1,
+    "hearts_lost_if_unprotected": {
+      "mild": 1,
+      "medium": 1,
+      "strong": 2
+    },
+    "random_chance_if_not_linked": {
+      "mild": 0.2,
+      "medium": 0.5,
+      "strong": 0.8
+    },
+    "rule": "If sep.found_in_donki is true the particles always arrive. Otherwise roll the random chance for the event level and tell the player it is a simplified rule."
+  },
+  "on_empty": {
+    "hearts_lost": 1,
+    "emergency_refill_one_day": {
+      "oxygen": 0.8,
+      "water": 2.5,
+      "food": 1.2
+    },
+    "rule": "When a resource reaches zero: lose a heart, show the explanation, refill one day so the player can fix the mistake."
+  },
+  "messages": {
+    "watch": "Solar flare detected! Class {class}, {date}. Radiation may be coming. Prepare the shelter?",
+    "radiation_hit": "Ouch! Fast particles from the Sun reached the base and the crew was not in the shelter. Thick walls block most radiation, so astronauts hide there during a storm.",
+    "radiation_blocked": "Safe! The crew was in the shelter and the radiation was blocked.",
+    "false_alarm": "The particles did not arrive this time. Preparing cost power, but being ready is what real astronauts do.",
+    "oxygen_empty": "Oxygen ran out! The air machines need electricity, so air comes first.",
+    "water_empty": "Water ran out! The greenhouse uses water, so watering plants can leave less to drink.",
+    "food_empty": "Food ran out! Plants need water, light and power to grow.",
+    "lucky": "The particles did not arrive this time, so Moonie was lucky! But nobody can be sure ahead of time, so real astronauts get ready anyway.",
+    "low_warning": "{name} is getting low."
+  },
+  "fact_cards": {
+    "oxygen": "We breathe in oxygen to stay alive. The Moon has no air, so astronauts make and recycle their own. The machines need electricity to run!",
+    "water": "Astronauts need clean water to drink and to grow plants. Water is precious in space, so they recycle as much as they can.",
+    "power": "Solar panels turn sunlight into electricity. On the Moon, night lasts about two weeks! Power runs the air machines, the plants and the shelter, but there is never enough for everything.",
+    "food": "Plants in the greenhouse can make fresh food, but they need water, light and power.",
+    "radiation": "The Sun sometimes throws out bursts of energy called solar flares. Fast particles can follow, and they are dangerous for astronauts. This game uses real solar events recorded by NASA.",
+    "shelter": "A shelter with thick walls blocks most radiation, so astronauts hide there during a storm.",
+    "hearts": "Hearts show how healthy the astronaut is. Keep air, water and food up, and stay safe from radiation."
+  },
+  "credits": {
+    "solar_events": "NASA DONKI (ccmc.gsfc.nasa.gov/DONKI)",
+    "text": "Real solar events from NASA's DONKI. Daily oxygen and water needs are based on NASA life-support planning values. All other numbers are simplified for the game."
+  }
+}</script>
+<script type="application/json" id="ev-embedded">[
+  {
+    "id": 1,
+    "level": "mild",
+    "flare": {
+      "activity_id": "2026-11-08T07:33:00-FLR-001",
+      "start": "2026-11-08T07:33:00Z",
+      "date": "2026-11-08T07:46:00Z",
+      "end": "2026-11-08T07:54:00Z",
+      "class": "M1.7",
+      "region": "S07W03 (DONKI region 14566)",
+      "note": "Peak time of the flare"
+    },
+    "sep": {
+      "found_in_donki": false,
+      "link": "none_found",
+      "checked_on": "2026-11-14",
+      "note": "No chain shown in DONKI for this flare as of 2026-11-14. The flare is recent, so links may be added later. Shelter trigger is a simplified game rule."
+    },
+    "source": "NASA DONKI"
+  },
+  {
+    "id": 2,
+    "level": "medium",
+    "flare": {
+      "activity_id": "2024-05-08T17:32:00-FLR-001",
+      "start": "2024-05-08T17:32:00Z",
+      "date": "2024-05-08T17:53:00Z",
+      "end": "2024-05-08T18:00:00Z",
+      "class": "M7.9",
+      "region": "S17W13 (DONKI region 13664)",
+      "note": "Peak time of the flare"
+    },
+    "sep": {
+      "found_in_donki": false,
+      "link": "none_found",
+      "checked_on": "2026-11-14",
+      "note": "No chain shown in DONKI for this flare. Shelter trigger is a simplified game rule."
+    },
+    "source": "NASA DONKI"
+  },
+  {
+    "id": 3,
+    "level": "strong",
+    "flare": {
+      "activity_id": "2024-05-11T01:10:00-FLR-001",
+      "start": "2024-05-11T01:10:00Z",
+      "date": "2024-05-11T01:23:00Z",
+      "end": "2024-05-11T01:39:00Z",
+      "class": "X5.8",
+      "region": "S17W47 (DONKI region 13664)",
+      "note": "Peak time of the flare"
+    },
+    "sep": {
+      "found_in_donki": true,
+      "link": "event_linked",
+      "linked_via": "flare, then CME, then SEP in DONKI's Chain panel",
+      "records": [
+        {
+          "activity_id": "2024-05-11T02:10:00-SEP-001",
+          "date": "2024-05-11T02:10:00Z",
+          "instrument": "GOES-P SEISS >100 MeV"
+        },
+        {
+          "activity_id": "2024-05-11T04:07:00-SEP-001",
+          "date": "2024-05-11T04:07:00Z",
+          "instrument": "STEREO A IMPACT 13-100 MeV"
+        }
+      ],
+      "instrument": "GOES-P",
+      "unit": "pfu (integral proton intensity)",
+      "readings": [
+        {
+          "time": "2024-05-11T18:30:00Z",
+          "proton_10MeV": 74.1,
+          "proton_100MeV": 2.7,
+          "label": "chart reading during the storm"
+        }
+      ],
+      "note": "Readings are hovered values from the DONKI SEP plot at the time shown. They are chart readings, not part of the SEP records."
+    },
+    "source": "NASA DONKI"
+  },
+  {
+    "id": 4,
+    "level": "strong",
+    "flare": {
+      "activity_id": "2024-05-10T06:27:00-FLR-001",
+      "start": "2024-05-10T06:27:00Z",
+      "date": "2024-05-10T06:54:00Z",
+      "end": "2024-05-10T07:06:00Z",
+      "class": "X3.9",
+      "region": "S18W37 (DONKI region 13664)",
+      "note": "Peak time of the flare"
+    },
+    "sep": {
+      "found_in_donki": true,
+      "link": "event_linked",
+      "activity_id": "2024-05-10T13:02:00-SEP-001",
+      "date": "2024-05-10T13:02:00Z",
+      "record_instrument": "SOHO COSTEP 28.2-50.1 MeV",
+      "instrument": "GOES-P",
+      "unit": "pfu (integral proton intensity)",
+      "readings": [
+        {
+          "time": "2024-05-10T13:00:00Z",
+          "proton_10MeV": 5.8,
+          "proton_100MeV": 0.2,
+          "label": "particle levels rising"
+        },
+        {
+          "time": "2024-05-10T15:15:00Z",
+          "proton_10MeV": 40.0,
+          "proton_100MeV": 0.2,
+          "label": "storm level"
+        },
+        {
+          "time": "2024-05-10T17:50:00Z",
+          "proton_10MeV": 144.9,
+          "proton_100MeV": 0.2,
+          "label": "highest value we read"
+        }
+      ],
+      "note": "Readings are hovered values from the DONKI SEP plot. The storm threshold for 10 MeV is 10 pfu. DONKI lists further SEP records the same day."
+    },
+    "source": "NASA DONKI"
+  }
+]
+</script>
+<script>
+const $ = s => document.querySelector(s);
+let CFG, EVENTS;
+const ROOMS = {
+  oxygen_room: {img:'assets/oxygen.jpg', card:'oxygen'},
+  greenhouse: {img:'assets/greenhouse.jpg', card:'food'},
+  power_room: {img:'assets/power.jpg', card:'power'},
+  radiation_shelter: {img:'assets/shelter.jpg', card:'shelter', pos:'50% 25%'}
+};
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const fmtDate = iso => { const d=new Date(iso); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')} UTC`; };
+const fmtTime = iso => { const d=new Date(iso); return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`; };
+const n1 = x => (Math.round(x*10)/10).toFixed(1);
+const CLASSWORD = {A:'tiny',B:'small',C:'small',M:'medium',X:'the strongest kind'};
+
+/* ---------- icons ---------- */
+const ICON = {
+  drop:'<svg viewBox="0 0 24 24"><path d="M12 2.5S5 10.5 5 15a7 7 0 0014 0c0-4.5-7-12.5-7-12.5z" fill="#5aa9f0" stroke="#2b2350" stroke-width="1.6"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24"><path d="M13.5 2L4.5 14h6l-1 8 9-12h-6z" fill="#ffc83d" stroke="#2b2350" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  apple:'<svg viewBox="0 0 24 24"><path d="M12 7.5c-3-2-7 0-7 5 0 4 3 8 5 8 1 0 1.5-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8 0-5-4-7-7-5z" fill="#ef4b4b" stroke="#2b2350" stroke-width="1.6"/><path d="M12 7.5c0-2 1-4 3-4" stroke="#2b8a4e" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+  o2:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#8fd8f5" stroke="#2b2350" stroke-width="1.6"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="900" font-family="Arial" fill="#2b2350">O₂</text></svg>',
+  cal:'<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3" fill="#fff" stroke="#2b2350" stroke-width="1.6"/><rect x="3" y="4.5" width="18" height="5" rx="2" fill="#f58aa6" stroke="#2b2350" stroke-width="1.6"/><g fill="#2b2350"><circle cx="8" cy="14" r="1.1"/><circle cx="12" cy="14" r="1.1"/><circle cx="16" cy="14" r="1.1"/><circle cx="8" cy="17.5" r="1.1"/><circle cx="12" cy="17.5" r="1.1"/></g></svg>',
+  heart:'<svg viewBox="0 0 24 24"><path d="M12 21s-8.5-5.5-8.5-11.2A4.6 4.6 0 0112 7.2a4.6 4.6 0 018.5 2.6C20.5 15.5 12 21 12 21z" fill="#f4577d" stroke="#2b2350" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+};
+
+/* ---------- state ---------- */
+let S;
+function params(){ return new URLSearchParams(location.search); }
+function newGame(){
+  const R = CFG.resources, P = params();
+  const rad = CFG.radiation;
+  let ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+  if (P.get('event')) ev = EVENTS.find(e => String(e.id)===P.get('event')) || ev;
+  let eday = rad.emergency_day_min + Math.floor(Math.random()*(rad.emergency_day_max-rad.emergency_day_min+1));
+  if (P.get('emergency')) eday = +P.get('emergency');
+  S = {
+    scene:'hub', day:1, hearts:CFG.game.start_hearts,
+    oxygen:R.oxygen.start, water:R.water.start, food:R.food.start,
+    levels:{oxygen_room:'low', greenhouse:'low'},
+    prepared:false, watch:null, event:ev, emergencyDay:eday,
+    seen:new Set(), mistakes:[], lostRecently:false, radiationResult:null
+  };
+  startDay();
+}
+const L = room => CFG.rooms[room].levels[S.levels[room]];
+const budget = () => CFG.resources.power.daily_budget;
+const used = () => CFG.resources.power.baseline_use + L('oxygen_room').power_kwh + L('greenhouse').power_kwh + (S.prepared ? CFG.rooms.radiation_shelter.prepare_cost_kwh : 0);
+const free = () => budget() - used();
+
+function startDay(){
+  S.prepared = false;
+  S.watch = null;
+  if (S.day === S.emergencyDay) {
+    S.watch = {event:S.event};
+    const ev = S.event, msg = CFG.messages.watch.replace('{class}', ev.flare.class).replace('{date}', fmtDate(ev.flare.date));
+    modal({title:'⚠ Warning from NASA!', cls:'red', guide:true,
+      body:`<p>${msg}</p>${evInfo(ev)}<p style="font-size:calc(var(--u)*1.4)">The shelter costs ${CFG.rooms.radiation_shelter.prepare_cost_kwh} kWh of today's power. Go to the <b>Radiation Shelter</b> room to get ready.</p>`,
+      buttons:[{label:'OK, got it!', fn:()=>cardOnce('radiation')}]});
+  }
+}
+
+function evInfo(ev){
+  const cls = ev.flare.class, letter = cls[0];
+  return `<div class="evinfo"><span class="tag">REAL NASA DATA</span>
+    <b>Flare class ${cls}</b> (${CLASSWORD[letter]||''}) · peaked ${fmtDate(ev.flare.date)}<br>
+    Sunspot region: ${ev.flare.region}</div>`;
+}
+
+/* ---------- modal queue ---------- */
+const Q = []; let current = null;
+function modal(o){ Q.push(o); if (!current) nextModal(); }
+function nextModal(){
+  const o = Q.shift(); current = o || null;
+  const m = $('#modal');
+  if (!o) { m.innerHTML=''; return; }
+  m.innerHTML = `<div class="mback"><div class="card ${o.cls||''} ${o.guide?"hasg":""}">${o.guide?'<img class="mg" src="assets/astronaut.png" alt="Moonie">':''}<div class="mbody"><h2>${o.title}</h2>${o.body}<div class="mbtns">${(o.buttons||[{label:'Got it!'}]).map((b,i)=>`<button class="btn ${b.cls||''} big" data-mb="${i}">${b.label}</button>`).join('')}</div></div></div></div>`;
+}
+$('#modal').addEventListener('click', e => {
+  const b = e.target.closest('[data-mb]'); if (!b || !current) return;
+  const o = current; current = null; $('#modal').innerHTML='';
+  const btn = (o.buttons||[{}])[+b.dataset.mb] || {};
+  btn.fn && btn.fn();
+  if (!current) nextModal();
+});
+function showCard(key){ modal({title:'💡 Did you know?', guide:true, body:`<p>${CFG.fact_cards[key]}</p>`}); }
+function cardOnce(key){ if (S.seen.has(key)) return; S.seen.add(key); showCard(key); }
+
+/* ---------- actions ---------- */
+function setLevel(room, lvl){
+  const cur = L(room).power_kwh, nxt = CFG.rooms[room].levels[lvl].power_kwh;
+  if (nxt - cur > free()) { shake(room+lvl); return; }
+  S.levels[room] = lvl; render();
+}
+function togglePrep(){
+  const c = CFG.rooms.radiation_shelter.prepare_cost_kwh;
+  if (!S.prepared && free() < c) { shake('prep'); return; }
+  S.prepared = !S.prepared; render();
+}
+function shake(id){ const el=document.querySelector(`[data-id="${id}"]`); if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
+function go(scene){
+  S.scene = scene; render();
+  if (scene.startsWith('room:')) {
+    const r = scene.slice(5);
+    if (r==='greenhouse' && !S.seen.has('food')) { cardOnce('food'); cardOnce('water'); }
+    else cardOnce(ROOMS[r].card);
+  }
+}
+
+function forecast(){
+  const R = CFG.resources, O = L('oxygen_room'), G = L('greenhouse');
+  return {
+    oxygen: Math.min(R.oxygen.max, S.oxygen + O.oxygen_kg - R.oxygen.daily_use),
+    water: Math.min(R.water.max, S.water - R.water.daily_use + R.water.daily_recovered - G.water_l),
+    food: Math.min(R.food.max, S.food + G.food_kg - R.food.daily_use)
+  };
+}
+
+function tryEndDay(){
+  if (S.watch && !S.prepared) {
+    modal({title:'Wait, Moonie!', cls:'red', guide:true,
+      body:`<p>There is a solar flare warning, but the shelter is not ready. Radiation can hurt astronauts who are not protected.</p>`,
+      buttons:[{label:'Go to the shelter', cls:'green', fn:()=>go('room:radiation_shelter')},{label:'End the day anyway', cls:'grey', fn:endDay}]});
+  } else endDay();
+}
+
+function endDay(){
+  const R = CFG.resources, M = CFG.messages, O = L('oxygen_room'), G = L('greenhouse');
+  const before = {oxygen:S.oxygen, water:S.water, food:S.food};
+  const after = {
+    oxygen: Math.min(R.oxygen.max, S.oxygen + O.oxygen_kg - R.oxygen.daily_use),
+    water: Math.min(R.water.max, S.water - R.water.daily_use + R.water.daily_recovered - G.water_l),
+    food: Math.min(R.food.max, S.food + G.food_kg - R.food.daily_use)
+  };
+  const notes = [];
+  const lose = (n, why) => { S.hearts = Math.max(0, S.hearts - n); S.lostRecently = true; if (why) S.mistakes.push(why); };
+
+  // radiation
+  if (S.watch) {
+    const ev = S.watch.event, rad = CFG.radiation;
+    const linked = ev.sep && ev.sep.found_in_donki === true;
+    let arrives = linked, chance = null;
+    if (!linked) { chance = rad.random_chance_if_not_linked[ev.level]; arrives = Math.random() < chance; }
+    const why = linked
+      ? `NASA's DONKI database links this flare to a real particle storm, so the radiation always arrives in the game.`
+      : `NASA's DONKI shows no linked particle storm for this flare, so the game rolled a dice (${Math.round(chance*100)}% chance). This is a simplified game rule.`;
+    let text, type;
+    if (arrives && S.prepared) { text = M.radiation_blocked; type='good'; }
+    else if (arrives) { text = M.radiation_hit; type='bad'; lose(rad.hearts_lost_if_unprotected[ev.level], 'Not hiding in the shelter during a solar storm.'); }
+    else if (S.prepared) { text = M.false_alarm; type='info'; }
+    else { text = M.lucky; type='info'; }
+    notes.push({type, text:'☀ ' + text, small: why + particleLine(ev, arrives)});
+  }
+  // empties
+  const names = {oxygen:'Oxygen', water:'Water', food:'Food'};
+  for (const k of ['oxygen','water','food']) {
+    if (after[k] <= 0.0001) {
+      lose(1, M[k+'_empty']);
+      notes.push({type:'bad', text:'💔 '+M[k+'_empty'], small:'Moonie lost a heart. A supply drop gave one day of '+k+' so you can fix the plan.'});
+      after[k] = CFG.on_empty.emergency_refill_one_day[k];
+      S.seen.add(k); // learned it the hard way
+    }
+  }
+  // low warnings
+  for (const k of ['oxygen','water','food']) {
+    if (after[k] < R[k].low_warning_below) notes.push({type:'warn', text:'⚠ '+M.low_warning.replace('{name}', names[k]) + ` (${n1(after[k])} ${R[k].unit} left)`});
+  }
+  const rows = ['oxygen','water','food'].map(k => {
+    const d = after[k]-before[k];
+    return `<tr><td>${ICON[{oxygen:'o2',water:'drop',food:'apple'}[k]].replace('<svg','<svg style="width:calc(var(--u)*2.2);height:calc(var(--u)*2.2);vertical-align:calc(var(--u)*-0.5);margin-right:calc(var(--u)*0.6)"')}${names[k]}</td><td>${n1(before[k])} → ${n1(after[k])} ${R[k].unit}</td><td class="${d>=0?'up':'down'}">${d>=0?'▲ +':'▼ '}${n1(d)}</td></tr>`;
+  }).join('');
+  Object.assign(S, after);
+  const dead = S.hearts <= 0, won = !dead && S.day >= CFG.game.days_to_survive;
+  const notesHtml = notes.map(n => `<div class="note ${n.type}">${n.text}${n.small?`<small>${n.small}</small>`:''}</div>`).join('');
+  const day = S.day;
+  S.watch = null; S.prepared = false;
+  render();
+  modal({title:`Day ${day} report`, cls: dead?'red':'', body:`<table class="rep">${rows}</table>${notesHtml||'<div class="note good">A calm day. Nice planning!</div>'}`,
+    buttons:[{label: dead ? 'Continue' : won ? 'Finish mission 🚀' : `Start Day ${day+1} ▶`, cls:'green', fn:()=>{
+      if (dead) return finish(false);
+      if (won) return finish(true);
+      S.day++; S.lostRecently=false; startDay(); render();
+    }}]});
+}
+
+function particleLine(ev, arrives){
+  const r = ev.sep && ev.sep.readings;
+  if (!arrives || !r || !r.length) return '';
+  const vals = r.map(x => `${n1(x.proton_10MeV)} (${fmtTime(x.time)} UTC)`).join(' → ');
+  return ` Particle levels read from NASA's DONKI chart (10 MeV protons): ${vals}.`;
+}
+
+function finish(won){
+  S.scene = won ? 'win' : 'lose'; render();
+}
+
+/* ---------- rendering ---------- */
+function renderHUD(){
+  const R = CFG.resources, show = S.scene !== 'intro' && S.scene !== 'win' && S.scene !== 'lose';
+  const hud = $('#hud');
+  if (!show) { hud.innerHTML=''; return; }
+  const low = k => S[k] < R[k].low_warning_below ? 'low' : '';
+  const hearts = Array.from({length:CFG.game.max_hearts}, (_,i) => `<span class="${i>=S.hearts?'gone':''} ${(i>=S.hearts&&S.lostRecently&&i===S.hearts)?'lost':''}">${ICON.heart}</span>`).join('');
+  hud.innerHTML = `<div class="hudbar">
+    <div class="hi" style="pointer-events:none">${ICON.cal}Day ${S.day}<small>/ ${CFG.game.days_to_survive}</small></div><i class="sep"></i>
+    <button class="hi ${low('water')}" data-card="water" title="Water">${ICON.drop}${n1(S.water)} L</button><i class="sep"></i>
+    <button class="hi" data-card="power" title="Power left to use today">${ICON.bolt}${free()}<small>/ ${budget()} kWh</small></button><i class="sep"></i>
+    <button class="hi ${low('food')}" data-card="food" title="Food">${ICON.apple}${n1(S.food)} kg</button><i class="sep"></i>
+    <button class="hi ${low('oxygen')}" data-card="oxygen" title="Oxygen">${ICON.o2}${n1(S.oxygen)} kg</button><i class="sep"></i>
+    <button class="hearts" data-card="hearts" title="Hearts">${hearts}</button>
+  </div>`;
+}
+
+function pill(x, y, cls, text){ return `<div class="pill ${cls}" style="left:${x}%;top:${y}%">${text}</div>`; }
+
+function renderHub(){
+  const o = S.levels.oxygen_room, g = S.levels.greenhouse;
+  const radCls = S.watch ? (S.prepared ? 'ready' : 'alert') : 'quiet';
+  const radTxt = S.watch ? (S.prepared ? 'READY' : 'ALERT!') : 'QUIET';
+  return `
+    <button class="hot" data-go="greenhouse" title="Greenhouse" aria-label="Greenhouse" style="left:24.5%;top:15.4%;width:15.4%;height:24.8%"></button>
+    <button class="hot" data-go="oxygen_room" title="Oxygen Room" aria-label="Oxygen Room" style="left:59.8%;top:15.4%;width:15.4%;height:24.8%"></button>
+    <button class="hot" data-go="power_room" title="Power Room" aria-label="Power Room" style="left:13.6%;top:44.1%;width:15.7%;height:24%"></button>
+    <button class="hot ${S.watch&&!S.prepared?'alert':''}" data-go="radiation_shelter" title="Radiation Shelter" aria-label="Radiation Shelter" style="left:70.6%;top:44.1%;width:15.8%;height:24%"></button>
+    ${pill(32.3,35.3,g,g.toUpperCase())}${pill(67.6,35.3,o,o.toUpperCase())}
+    ${pill(21.35,62.4,free()<0?'alert':'low',`${free()} kWh free`)}${pill(78.6,62.9,radCls,radTxt)}
+    <button class="nextday" data-act="endday">Next Day ▶<small>Day ${S.day} of ${CFG.game.days_to_survive}</small></button>
+    <button class="hot" data-act="about" title="About / credits" aria-label="About" style="left:93.4%;top:3%;width:4.8%;height:8.5%"></button>
+    ${S.watch&&!S.prepared?'<div class="alertbadge">☀ Solar flare warning!</div>':''}
+    <div class="credit">Real solar events from NASA DONKI</div>`;
+}
+
+function chBtn(room, lvl, lines){
+  const sel = S.levels[room]===lvl, cur = L(room).power_kwh, nxt = CFG.rooms[room].levels[lvl].power_kwh;
+  const dis = !sel && nxt - cur > free();
+  return `<button class="ch ${sel?'sel':''}" data-id="${room+lvl}" data-set="${room}|${lvl}" ${dis?'disabled title="Not enough power left"':''}><b>${lvl.toUpperCase()}</b><span>${nxt} kWh</span>${lines}</button>`;
+}
+const oxyLines = l => `<span>+${n1(CFG.rooms.oxygen_room.levels[l].oxygen_kg)} kg air</span>`;
+const ghLines = l => { const x=CFG.rooms.greenhouse.levels[l]; return `<span>+${n1(x.food_kg)} kg food</span><span>−${n1(x.water_l)} L water</span>`; };
+const net = (v, unit, label) => `<span class="${v>=0?'ok':'bad'}">${label}: ${v>=0?'+':''}${n1(v)} ${unit}</span>`;
+
+function renderRoom(r){
+  const R = CFG.resources, O = L('oxygen_room'), G = L('greenhouse');
+  let title, tip, ctl;
+  if (r==='oxygen_room') {
+    title='Oxygen Room'; tip=`Moonie breathes ${n1(R.oxygen.daily_use)} kg of oxygen every day. The air machines need power to make more!`;
+    ctl = `<div class="choices">${['off','low','high'].map(l=>chBtn(r,l,oxyLines(l))).join('')}</div>
+      <div class="net">${net(O.oxygen_kg-R.oxygen.daily_use,'kg','Oxygen today')}<span>Power left: <b>${free()} kWh</b></span></div>`;
+  } else if (r==='greenhouse') {
+    title='Greenhouse'; tip='Plants make food, but they need power and water. Water is also for drinking, so choose carefully!';
+    ctl = `<div class="choices">${['off','low','high'].map(l=>chBtn(r,l,ghLines(l))).join('')}</div>
+      <div class="net">${net(G.food_kg-R.food.daily_use,'kg','Food today')}${net(R.water.daily_recovered-R.water.daily_use-G.water_l,'L','Water today')}<span>Power left: <b>${free()} kWh</b></span></div>`;
+  } else if (r==='power_room') {
+    title='Power Room'; tip=`We get ${budget()} kWh of solar power each day. Unused power is lost, so split it wisely!`;
+    const c = CFG.rooms.radiation_shelter.prepare_cost_kwh;
+    const seg = [['Base',R.power.baseline_use,'#b9a6ee'],['Oxygen',O.power_kwh,'#8fd8f5'],['Plants',G.power_kwh,'#9be3a8'],['Shelter',S.prepared?c:0,'#f58aa6'],['Free',Math.max(0,free()),'#fff']];
+    const bar = seg.filter(s=>s[1]>0).map(s=>`<div style="width:${s[1]/budget()*100}%;background:${s[2]}">${s[1]}</div>`).join('');
+    const legend = seg.map(s=>`<span><i style="background:${s[2]}"></i>${s[0]}</span>`).join('');
+    const f = forecast(), chip = (k,u,lbl)=>`<span class="chip ${f[k]<=0?'bad':''}">${lbl} ${n1(f[k])} ${u}</span>`;
+    ctl = `<div class="alloc">${bar}</div><div class="legend">${legend}</div>
+      <div class="row"><span class="rowlabel">Oxygen Room</span>${['off','low','high'].map(l=>chBtn('oxygen_room',l,'').replace(/<span>.*?<\/span>/,'<span>'+CFG.rooms.oxygen_room.levels[l].power_kwh+' kWh</span>')).join('')}</div>
+      <div class="row"><span class="rowlabel">Greenhouse</span>${['off','low','high'].map(l=>chBtn('greenhouse',l,'').replace(/<span>.*?<\/span>/,'<span>'+CFG.rooms.greenhouse.levels[l].power_kwh+' kWh</span>')).join('')}</div>
+      <div class="chips"><b style="font-size:calc(var(--u)*1.3)">Tomorrow morning:</b>${chip('oxygen','kg','Oxygen')}${chip('water','L','Water')}${chip('food','kg','Food')}</div>`;
+  } else {
+    title='Radiation Shelter'; const c = CFG.rooms.radiation_shelter.prepare_cost_kwh;
+    if (S.watch) {
+      tip = 'Thick walls block most radiation. Get the shelter ready before the end of the day!';
+      ctl = `${evInfo(S.watch.event)}
+        <div class="row" style="align-items:center"><button class="btn ${S.prepared?'green':''}" data-id="prep" data-act="prep">${S.prepared?'✔ Shelter ready (tap to cancel)':`Prepare shelter · ${c} kWh`}</button><span class="net">Power left: <b>${free()} kWh</b></span></div>`;
+    } else {
+      tip = 'Thick walls block most radiation, so astronauts hide here during a storm.';
+      ctl = `<div class="evinfo">☀ No solar flare warnings today. NASA scientists watch the Sun every day. When a flare is spotted, come back here and get ready.<br><span class="tag">REAL NASA DATA</span>The solar events in this game come from NASA's DONKI.</div>`;
+    }
+  }
+  return `<button class="back" data-go="hub">◀ Back to base</button>
+    <div class="panel"><img class="guide" src="assets/astronaut.png" alt="Moonie"><div class="ptxt"><h2>${title}</h2><p>${tip}</p></div><div class="pctl">${ctl}</div></div>`;
+}
+
+function intro(step){
+  const T = [
+    ['Hi! I\'m Moonie!', 'I\'m an astronaut living in a base on the Moon. Can you help me survive for <b>5 days</b>?'],
+    ['Power is limited', `Every day our solar panels give us <b>${budget()} kWh</b>. That\'s not enough for everything! Choose what to switch on: air machines, plants, or the radiation shelter.`],
+    ['Watch the Sun!', 'I need <b>air, water and food</b> to stay healthy. And sometimes the Sun throws out dangerous radiation. This game uses <b>real solar events recorded by NASA</b>.']
+  ];
+  const [h,p] = T[step];
+  const last = step === T.length-1;
+  return `<div class="stars"></div><div class="center"><img src="assets/astronaut.png" alt="Moonie"><div class="bubble">
+    ${step===0?'<h1>MOONIE</h1>':''}<h2>${h}</h2><p>${p}</p>
+    <div class="dots">${T.map((_,i)=>`<i class="${i===step?'on':''}"></i>`).join('')}</div>
+    <button class="btn big green" data-intro="${last?'start':step+1}">${last?'Start mission! 🚀':'Next ▶'}</button>
+    <div class="small">${CFG.credits.text}</div></div></div>`;
+}
+
+function endScreen(won){
+  const learned = [...new Set(S.mistakes)];
+  return `<div class="stars"></div><div class="center"><img src="assets/astronaut.png" alt="Moonie" style="${won?'':'filter:grayscale(.6)'}"><div class="bubble">
+    <h2>${won?'🎉 Mission complete!':'Oh no! Moonie needs a rest.'}</h2>
+    <p>${won?`Moonie survived all ${CFG.game.days_to_survive} days with ${S.hearts} ${S.hearts===1?'heart':'hearts'} left!`:`Moonie ran out of hearts on day ${S.day}. Real astronauts train again and again, so let\'s try once more!`}</p>
+    ${learned.length?`<p style="font-size:calc(var(--u)*1.6)"><b>What Moonie learned:</b></p><ul>${learned.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+    <p style="font-size:calc(var(--u)*1.5)">☀ Solar event in this mission: <b>${S.event.flare.class}</b> flare, ${fmtDate(S.event.flare.date)} (NASA DONKI).</p>
+    <button class="btn big green" data-act="restart">Play again ↻</button>
+    <div class="small">${CFG.credits.text}</div></div></div>`;
+}
+
+let introStep = 0;
+function render(){
+  const sc = S ? S.scene : 'intro', bg = $('#bg'), layer = $('#layer');
+  let html = '';
+  if (!S) { bg.style.display='none'; layer.innerHTML = intro(introStep); $('#hud').innerHTML=''; return; }
+  if (sc==='hub') { bg.src='assets/hub.jpg'; bg.style.display='block'; bg.style.objectPosition='50% 50%'; html = renderHub(); }
+  else if (sc.startsWith('room:')) { const r=sc.slice(5); bg.src=ROOMS[r].img; bg.style.display='block'; bg.style.objectPosition=ROOMS[r].pos||'50% 50%'; html = renderRoom(r); }
+  else { bg.style.display='none'; html = endScreen(sc==='win'); }
+  layer.innerHTML = html;
+  renderHUD();
+}
+
+$('#layer').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const d = t.dataset;
+  if (d.intro) { if (d.intro==='start') { introStep=0; newGame(); render(); modal({title:'Your mission', guide:true, body:`<p>Survive <b>${CFG.game.days_to_survive} days</b>. Tap a room to turn its machines on or off, then press <b>Next Day</b>.</p><p>Tip: tap the numbers at the top to learn about them!</p>`, buttons:[{label:"Let's go!", fn:()=>cardOnce('hearts')}]}); } else { introStep=+d.intro; render(); } }
+  else if (d.go) go(d.go==='hub' ? 'hub' : 'room:'+d.go);
+  else if (d.set) { const [r,l]=d.set.split('|'); setLevel(r,l); }
+  else if (d.act==='prep') togglePrep();
+  else if (d.act==='endday') tryEndDay();
+  else if (d.act==='restart') { S=null; introStep=0; render(); }
+  else if (d.act==='about') modal({title:'About MOONIE', body:`<p>${CFG.credits.text}</p><p style="font-size:calc(var(--u)*1.4)">Solar events: ${CFG.credits.solar_events}. Oxygen and water values are based on NASA life-support planning figures; everything else is a simplified game number.</p>`});
+});
+$('#hud').addEventListener('click', e => { const b=e.target.closest('[data-card]'); if (b) showCard(b.dataset.card); });
+document.addEventListener('keydown', e => { if (e.key==='Escape' && S && S.scene.startsWith('room:') && !current) go('hub'); });
+
+async function load(){
+  try {
+    const [c,v] = await Promise.all(['game-config.json','solar-events.json'].map(f => fetch(f).then(r => { if(!r.ok) throw 0; return r.json(); })));
+    CFG=c; EVENTS=v;
+  } catch(_) {
+    CFG = JSON.parse($('#cfg-embedded').textContent); EVENTS = JSON.parse($('#ev-embedded').textContent);
+  }
+  render();
+  if (params().get('skip')) { newGame(); render(); }
+}
+load();
+</script>
+</body>
+</html>
