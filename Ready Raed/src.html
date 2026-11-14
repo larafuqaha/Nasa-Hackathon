@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOONIE – Moon Base Survival</title>
+<style>
+:root{--ink:#2b2350;--cream:#fdf0ec;--lav:#b9a6ee;--pink:#f58aa6;--green:#5fcf8a;--yellow:#ffc83d;--red:#ef4b4b;--blue:#5aa9f0}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1c1638;overflow:hidden;font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ink)}
+body{display:flex;align-items:center;justify-content:center}
+#stage{--u:calc(min(100vw,177.78vh)/100);position:relative;width:100u;height:56.25u;overflow:hidden;font-size:1.6u;background:radial-gradient(circle at 50% 30%,#6f5bb8,#3a2f73 70%)}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;transition:filter .6s}
+#layer,#hud,#modal,#fx{position:absolute;inset:0}
+#hud,#fx{pointer-events:none}
+#modal{z-index:30}#fx{z-index:40}
+button{font-family:inherit;color:inherit;cursor:pointer}
+/* HUD */
+.hudbar{position:absolute;left:12.4%;top:1.3%;width:75.2%;height:9.8%;background:var(--cream);border:0.35u solid var(--ink);border-radius:5u;display:flex;align-items:center;justify-content:space-around;padding:0 1.5u;pointer-events:auto;box-shadow:0 0.3u 0 rgba(43,35,80,.25)}
+.hi{display:flex;align-items:center;gap:0.6u;background:none;border:0;font-size:1.9u;font-weight:800;padding:0.3u 0.6u;border-radius:2u;white-space:nowrap}
+.hi{position:relative}
+.hi:hover{background:rgba(185,166,238,.35)}
+.hi[data-tip]::after,.hearts[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 1u);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:1.5u;font-weight:700;padding:0.6u 1.4u;border-radius:1.2u;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;z-index:50}
+.hi[data-tip]:hover::after,.hearts[data-tip]:hover::after{opacity:1}
+.hearts{position:relative}
+.hi svg{width:3.2u;height:3.2u}
+.hi small{font-size:1.2u;font-weight:700;opacity:.6}
+.sep{width:0.2u;height:4.5u;background:rgba(43,35,80,.2)}
+.mt{--c:var(--blue);position:relative;width:6.2u;height:2u;background:#fff;border:0.25u solid var(--ink);border-radius:1u;overflow:hidden}
+.mt i{position:absolute;left:0;top:0;bottom:0;background:var(--c);transition:width .6s}
+.mt::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/var(--n) - 0.14u),rgba(43,35,80,.35) calc(100%/var(--n) - 0.14u),rgba(43,35,80,.35) calc(100%/var(--n)))}
+.mt.water{--c:#5aa9f0}.mt.power{--c:#ffc83d}.mt.food{--c:#f08a4b}.mt.oxygen{--c:#7fd6f0}
+.mt.low i{background:var(--red)}.mt.low,.hi.low svg{animation:pulse .9s infinite}
+.mt.will{box-shadow:0 0 0 0.3u var(--red)}
+.hearts{display:flex;gap:0.4u;pointer-events:auto;background:none;border:0}
+.hearts svg{width:3.2u;height:3.2u}
+.hearts .gone{filter:grayscale(1) opacity(.35)}
+.hearts .lost{animation:shake .5s}
+.daychip{position:absolute;left:50%;top:11.8u;transform:translateX(-50%);background:var(--cream);border:0.3u solid var(--ink);border-radius:3u;padding:0.3u 2u;font-size:1.5u;font-weight:800;z-index:4;white-space:nowrap}
+/* hub */
+.hot{position:absolute;border:0;background:transparent;border-radius:50%;transition:.15s}
+.hot:hover,.hot:focus-visible{box-shadow:0 0 0 0.5u rgba(255,255,255,.8),0 0 3u 0.5u rgba(255,255,255,.6);transform:scale(1.04);outline:none}
+.hot.alert{animation:ring 1s infinite}
+.hot.nudge{animation:ring 1s 3}
+.pill{position:absolute;transform:translate(-50%,-50%);min-width:8u;padding:0.35u 1u;text-align:center;font-size:1.25u;font-weight:900;letter-spacing:.05em;border-radius:3u;border:0.25u solid var(--ink);background:#ddd;pointer-events:none;display:flex;align-items:center;justify-content:center;gap:0.4u}
+.pill svg{width:1.8u;height:1.8u}
+.pill.off{background:#d8d3e6;color:#6b6489}.pill.low{background:var(--yellow)}.pill.high{background:var(--green)}.pill.alert{background:var(--red);color:#fff;animation:pulse .8s infinite}.pill.ready{background:var(--green)}.pill.quiet{background:#cfe9ff}
+.warnb{position:absolute;transform:translate(-50%,-50%);width:3.6u;height:3.6u;border-radius:50%;background:var(--red);color:#fff;border:0.3u solid var(--ink);font-weight:900;font-size:2.4u;display:flex;align-items:center;justify-content:center;animation:pop2 .8s infinite;pointer-events:none}
+.nextday{position:absolute;left:41.4%;top:67.2%;width:17.2%;height:27.8%;border-radius:50%;border:0.4u solid var(--ink);background:radial-gradient(circle at 50% 30%,#ffd1e0,#e9a6f5);font-weight:900;font-size:2.6u;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.3u;box-shadow:0 0.6u 0 rgba(43,35,80,.3);transition:.15s}
+.nextday small{font-size:1.4u;font-weight:700;opacity:.75}
+.nextday:hover{transform:scale(1.05)}
+.nextday.storm{font-size:2.2u;background:radial-gradient(circle at 50% 30%,#ffc2c2,#ff6b6b);animation:throb2 1s infinite}
+.nextday.locked{background:radial-gradient(circle at 50% 30%,#e7e2f2,#c9c0e0);color:#6b6489}
+.credit{position:absolute;left:1.2u;bottom:1u;font-size:1.15u;font-weight:700;background:rgba(253,240,236,.85);border-radius:2u;padding:0.4u 1.2u;border:0.2u solid var(--ink)}
+.alertbadge{position:absolute;left:50%;top:18.5u;transform:translateX(-50%);background:var(--red);color:#fff;font-weight:900;font-size:1.8u;padding:0.6u 2.2u;border-radius:3u;border:0.3u solid var(--ink);animation:pulse 1s infinite;pointer-events:none;white-space:nowrap}
+/* rooms */
+.back{position:absolute;left:1.5u;top:12.6u;z-index:5;background:var(--cream);border:0.3u solid var(--ink);border-radius:3u;padding:0.6u 2u;font-size:1.7u;font-weight:900}
+.back:hover{background:#fff}
+.panel{position:absolute;left:2%;right:2%;bottom:2.5%;z-index:6;background:rgba(253,240,236,.96);border:0.35u solid var(--ink);border-radius:2.5u;padding:1.2u 2u 1.2u 15u;display:flex;gap:2.5u;align-items:stretch;min-height:10u;box-shadow:0 0.6u 0 rgba(43,35,80,.3)}
+.panel.slim{min-height:9u}
+.guide{position:absolute;left:1u;bottom:0.6u;height:19u;filter:drop-shadow(0 0.3u 0 rgba(43,35,80,.25));pointer-events:none;animation:bob 3s ease-in-out infinite}
+.ptxt{flex:0 0 28%}
+.ptxt h2{margin:0 0 0.5u;font-size:2.4u}
+.ptxt p{margin:0;font-size:1.45u;line-height:1.35}
+.pctl{flex:1;display:flex;flex-direction:column;gap:0.9u;justify-content:center}
+.choices{display:flex;gap:1u}
+.ch{flex:1;border:0.3u solid var(--ink);border-radius:1.6u;background:#fff;padding:0.5u 0.5u;text-align:center;line-height:1.25;transition:.12s;display:flex;align-items:center;justify-content:center;gap:0.6u;font-weight:900;font-size:1.5u}
+.ch svg{width:2.2u;height:2.2u}
+.ch:hover:not(:disabled){transform:translateY(-0.2u);background:#f4ecff}
+.ch.sel{background:var(--lav);box-shadow:inset 0 0 0 0.25u var(--ink)}
+.ch:disabled{opacity:.4;cursor:not-allowed}
+.ch.shake,.shake{animation:shake .4s}
+.row{display:flex;gap:0.8u;align-items:stretch}
+.rowlabel{font-size:1.4u;font-weight:900;margin-right:0.8u;align-self:center;min-width:13u;display:flex;align-items:center;gap:0.6u}
+.rowlabel svg{width:2.6u;height:2.6u}
+.alloc{display:flex;height:2.6u;border:0.25u solid var(--ink);border-radius:1.5u;overflow:hidden;background:#fff}
+.alloc div{transition:width .4s}
+.legend{display:flex;gap:1.4u;font-size:1.15u;font-weight:700;flex-wrap:wrap}
+.legend i{display:inline-block;width:1.2u;height:1.2u;border-radius:50%;border:0.15u solid var(--ink);margin-right:0.4u;vertical-align:-0.1u}
+.chips{display:flex;gap:0.8u;flex-wrap:wrap;align-items:center}
+.chip{background:#fff;border:0.25u solid var(--ink);border-radius:2u;padding:0.2u 1.2u;font-size:1.4u;font-weight:900;display:flex;align-items:center;gap:0.5u}
+.chip svg{width:2.4u;height:2.4u}
+.chip.bad{background:#ffd9d9;animation:pulse 1s infinite}.chip.good{background:#d9f7e4}
+.btn{border:0.3u solid var(--ink);background:var(--yellow);border-radius:2u;padding:0.8u 2.4u;font-size:1.7u;font-weight:900;box-shadow:0 0.3u 0 var(--ink);transition:.1s}
+.btn:hover{transform:translateY(-0.15u)}.btn:active{transform:translateY(0.2u);box-shadow:none}
+.btn.big{font-size:2u;padding:1u 3u}
+.btn.green{background:var(--green)}.btn.red{background:var(--red);color:#fff}.btn.grey{background:#ddd}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.evinfo{font-size:1.4u;line-height:1.4;background:#fff;border:0.25u solid var(--ink);border-radius:1.5u;padding:0.6u 1.2u}
+.tag{display:inline-block;background:var(--blue);color:#fff;border-radius:2u;padding:0.1u 1u;font-size:1.1u;font-weight:900;margin-right:.5u}
+details{font-size:1.3u;margin:0.6u 0}summary{cursor:pointer;font-weight:800}
+details p{font-size:1.25u!important;margin:0.3u 0!important}
+/* room overlays */
+.dim{position:absolute;inset:0;background:#0c0828;pointer-events:none;transition:opacity .6s;z-index:1}
+.litlabel{position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:3;background:rgba(253,240,236,.92);border:0.3u solid var(--ink);border-radius:3u;padding:0.4u 2u;font-weight:900;font-size:1.6u;pointer-events:none;white-space:nowrap}
+.spot{position:absolute;transform:translate(-50%,-50%);z-index:3}
+.plus{width:5u;height:5u;border-radius:50%;border:0.35u solid var(--ink);background:var(--green);font-size:3.2u;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 0.4u 0 var(--ink);animation:bob 1.6s ease-in-out infinite;padding:0}
+.plus:hover{transform:scale(1.15)}
+.plus.dark{background:#8b86a8}.plus.empty{background:var(--red);color:#fff}
+.moon{position:absolute;right:-1.2u;top:-1.2u;font-size:2.2u;color:#ffe9a8;text-shadow:0 0 0.4u #2b2350,0 0 0.4u #2b2350;pointer-events:none}
+.plus svg{width:3u;height:3u}
+.sleepy{width:4.4u;height:4.4u;border-radius:50%;background:rgba(43,35,80,.65);color:#ffe9a8;font-size:2.4u;display:flex;align-items:center;justify-content:center;border:0.25u dashed #ffe9a8}
+.fruit{background:none;border:0;padding:0;width:5u;height:5u;animation:fruitin .5s,bob 1.4s .5s ease-in-out infinite;filter:drop-shadow(0 0.3u 0 rgba(43,35,80,.35))}
+.fruit svg{width:100%;height:100%}
+.fcount{position:absolute;right:-1.2u;bottom:-0.4u;background:#2b2350;color:#fff;border-radius:2u;padding:0.1u 0.6u;font-size:1.5u}
+.fruit{position:relative}
+.fruit:hover{transform:scale(1.2)}
+.done{font-size:3u;opacity:.9}
+.growfx{position:absolute;width:9u;height:9u;border-radius:50%;background:radial-gradient(circle,rgba(150,255,150,.8),transparent 65%);animation:grow .7s forwards;transform:translate(-50%,-50%);pointer-events:none;z-index:3}
+.tank{position:absolute;right:1.8%;top:13%;z-index:3;width:9u;display:flex;flex-direction:column;align-items:center;gap:0.5u;background:rgba(253,240,236,.9);border:0.35u solid var(--ink);border-radius:2u;padding:0.8u 0.8u 1u}
+.tank svg{width:3.6u;height:3.6u}
+.glass{position:relative;width:5.6u;height:21u;border:0.3u solid var(--ink);border-radius:1.2u 1.2u 2u 2u;overflow:hidden;background:rgba(255,255,255,.7)}
+.glass::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0,transparent calc(100%/var(--n,10) - 0.14u),rgba(43,35,80,.28) calc(100%/var(--n,10) - 0.14u),rgba(43,35,80,.28) calc(100%/var(--n,10)))}
+.lv{position:absolute;left:0;right:0;bottom:0;height:var(--to);animation:lvl .9s ease-out;background:linear-gradient(#8cc9ff,#4d97e8)}
+.tank.oxygen .lv{background:linear-gradient(#c6f1ff,#6fcbe8)}
+.tank.low .glass{animation:pulse .9s infinite;border-color:var(--red)}
+.molbg{position:absolute;inset:0;z-index:8;background:rgba(28,22,56,.5);display:flex;align-items:center;justify-content:center;animation:fade .2s}
+.molcard{width:62u;background:var(--cream);border:0.45u solid var(--ink);border-radius:3u;padding:1.8u 3u 2u;box-shadow:0 1u 0 rgba(43,35,80,.35);text-align:center;animation:pop .25s;margin-top:6u}
+.molcard h2{margin:0 0 0.6u;font-size:2.8u}
+.mols{display:flex;justify-content:center;gap:6u;margin:0.6u 0}
+.mol{position:relative;width:24u;height:17u}
+.bonds{position:absolute;inset:0;width:24u;height:17u;z-index:0;transition:opacity .3s}.bonds.gone{opacity:0}
+.atom{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:0.35u solid var(--ink);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--ink);padding:0;transition:opacity .3s;z-index:1}
+.atom.H{width:6.4u;height:6.4u;background:#d5f1ff;font-size:2.6u}
+.atom.O{width:10u;height:10u;background:#ff8c9a;font-size:4.2u;animation:throb 1.2s infinite;cursor:pointer}
+.atom.O:hover{animation:none;transform:translate(-50%,-50%) scale(1.12)}
+.atom.O.made{background:#bfeaf8;animation:none;cursor:default}
+.atom.O.shake{animation:shakea .4s}
+.atom.gone{opacity:0;pointer-events:none}
+.atom.fly.l{animation:flyl 1.1s forwards}.atom.fly.r{animation:flyr 1.1s forwards}
+.molcost{font-size:1.7u;font-weight:700;line-height:1.5}
+.molcard .note{text-align:left;font-size:1.6u}
+.molcard .btns{justify-content:center;margin-top:1u}
+@keyframes throb{50%{transform:translate(-50%,-50%) scale(1.07)}}
+@keyframes shakea{25%{transform:translate(-55%,-50%)}75%{transform:translate(-45%,-50%)}}
+@keyframes flyl{from{opacity:1}to{transform:translate(-220%,-260%);opacity:0}}
+@keyframes flyr{from{opacity:1}to{transform:translate(120%,-260%);opacity:0}}
+#snd{position:absolute;left:1.5u;top:7u;z-index:45;width:4.6u;height:4.6u;border-radius:50%;border:0.3u solid var(--ink);background:var(--cream);font-size:2.2u;padding:0;display:flex;align-items:center;justify-content:center}
+#snd:hover{background:#fff}
+.moodb{position:absolute;left:1.5u;bottom:5.2u;display:flex;align-items:center;gap:1u;pointer-events:none;z-index:4}
+.moodb img{width:8u;height:8u;border-radius:50%;border:0.3u solid var(--ink);background:var(--cream);animation:bob 2.5s ease-in-out infinite}
+.moodb span{background:var(--cream);border:0.25u solid var(--ink);border-radius:2u;padding:0.4u 1.4u;font-size:1.5u;font-weight:800}
+.sviz{position:relative;height:9u;background:#1c1638;border-radius:2u;overflow:hidden;border:0.3u solid var(--ink);margin:1u 0}
+.sun{position:absolute;left:1.5u;top:50%;width:6u;height:6u;transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle,#fff3a8,#ffb02e);box-shadow:0 0 2u 1u rgba(255,176,46,.7);animation:flare 1.4s infinite}
+.moonb{position:absolute;right:1.5u;top:50%;width:5.5u;height:5.5u;transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle at 35% 35%,#f4f2fa,#9a96b0)}
+.pt{position:absolute;left:8u;width:0.9u;height:0.9u;border-radius:50%;background:#ffe27a;box-shadow:0 0 0.6u #ffe27a;opacity:0;animation:fly 2.4s linear infinite}
+.card .sviz{height:7u;margin:0.6u 0}
+.card .evinfo{margin-bottom:0.4u}
+.tl{display:flex;gap:0.8u;font-size:1.25u}
+.tl div{flex:1;background:#fff;border:0.2u solid var(--ink);border-radius:1.2u;padding:0.4u 0.8u;text-align:center}
+.tl b{display:block;font-size:1.45u}.tl span{display:block;font-weight:600}
+#dash{position:absolute;inset:0;z-index:35;background:radial-gradient(circle,rgba(150,15,40,.88),rgba(28,22,56,.96));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.6u;color:#fff;animation:fade .2s;text-align:center;padding:3u}
+#dash h1{margin:0;font-size:5.4u;animation:pulse .7s infinite;letter-spacing:.04em}
+#dash p{margin:0;font-size:2.2u;font-weight:700}
+#dash .sviz{width:60u;margin:0}
+.dashbar{width:60u;height:3.2u;border-radius:2u;background:rgba(255,255,255,.25);border:0.3u solid #fff;overflow:hidden}
+.dashbar i{display:block;height:100%;background:var(--yellow);animation:shrink linear forwards}
+.dashgo{font-size:3.4u;padding:1.2u 4u;animation:throb2 .8s infinite}
+#dash img{width:9u;height:9u;border-radius:50%;border:0.3u solid #fff}
+.pickwrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4u;padding:3u}
+.pickwrap h2{margin:0;color:#fff;font-size:4u;text-shadow:0 0.3u 0 var(--ink)}
+.pickwrap p{margin:0;color:#fff;font-size:2u;font-weight:700}
+.picks{display:flex;gap:1.6u;margin:1u 0}
+.pk{width:21u;background:var(--cream);border:0.4u solid var(--ink);border-radius:2.4u;padding:1.6u 1.2u;text-align:center;box-shadow:0 0.7u 0 rgba(0,0,0,.3);transition:.15s;line-height:1.3}
+.pk:hover{transform:translateY(-0.6u);background:#fff}
+.pk b{display:block;font-size:2.1u}.pk .dt{font-size:1.6u;font-weight:800;margin:0.3u 0}.pk small{display:block;font-size:1.2u;opacity:.75;font-weight:700}
+.pk .sunic{width:9u;height:9u;margin:0 auto 0.6u;border-radius:50%;background:radial-gradient(circle,#fff3a8,#ffb02e);box-shadow:0 0 var(--g,1.5u) var(--g2,0.6u) rgba(255,150,40,.8)}
+.pk .lvl{display:inline-block;margin-top:0.6u;padding:0.2u 1.4u;border-radius:2u;border:0.2u solid var(--ink);font-weight:900;font-size:1.4u}
+.pk.easy .lvl{background:var(--green)}.pk.med .lvl{background:var(--yellow)}.pk.hard .lvl{background:var(--red);color:#fff}
+@keyframes flare{50%{transform:translateY(-50%) scale(1.25);box-shadow:0 0 3.5u 2u rgba(255,176,46,.9)}}
+@keyframes fly{from{left:8u;opacity:0}15%{opacity:1}to{left:calc(100% - 8u);opacity:1}}
+@keyframes shrink{from{width:100%}to{width:0}}
+@keyframes throb2{50%{transform:scale(1.08)}}
+#stormbar{position:absolute;left:50%;top:12.2u;transform:translateX(-50%);z-index:31;display:flex;align-items:center;gap:1u;background:var(--red);color:#fff;border:0.35u solid var(--ink);border-radius:3u;padding:0.5u 1.6u;font-weight:900;font-size:1.7u;white-space:nowrap;box-shadow:0 0.4u 0 rgba(43,35,80,.4)}
+#stormbar .dashbar{width:22u;height:2.2u;border-width:0.25u}
+#stormbar .dashbar i{animation:none;transition:width 1s linear}
+#stormbar b{font-size:2.4u;min-width:2.4u;text-align:right}
+#stormbar .btn{font-size:1.4u;padding:0.3u 1.4u}
+.bub{position:absolute;width:4u;height:4u;border-radius:50%;border:0.25u solid rgba(255,255,255,.95);background:radial-gradient(circle at 30% 30%,#fff,rgba(143,216,245,.55));z-index:3;animation:rise 4.2s linear forwards;cursor:pointer;padding:0}
+.bub.pop{animation:popb .25s forwards}
+.bub:hover{transform:scale(1.2)}
+/* modal */
+#modal:empty{display:none}
+.mback{position:absolute;inset:0;background:rgba(28,22,56,.65);display:flex;align-items:center;justify-content:center;animation:fade .2s}
+.card{position:relative;width:62u;max-height:52u;overflow:auto;background:var(--cream);border:0.45u solid var(--ink);border-radius:3u;padding:2.4u 3u;box-shadow:0 1u 0 rgba(43,35,80,.35);animation:pop .25s;display:flex;gap:2.5u;align-items:center}
+.mg{height:19u;flex:0 0 auto;animation:bob 3s ease-in-out infinite}
+.mbody{flex:1}
+.mbody h2{margin:0 0 1u;font-size:3u}
+.mbody p{margin:0 0 1u;font-size:1.8u;line-height:1.45}
+.mbtns{display:flex;gap:1.2u;margin-top:1.6u;flex-wrap:wrap}
+.card.red{background:#ffe7e7}.card.green{background:#e6fbee}
+.rep{width:100%;border-collapse:collapse;font-size:1.7u;margin-bottom:1u}
+.rep td{padding:0.35u 0.5u;border-bottom:0.15u dashed rgba(43,35,80,.25);vertical-align:middle}
+.rep td:last-child{text-align:right;font-weight:900}
+.rep .mt{display:inline-block;vertical-align:middle;width:6u;height:1.6u}
+.up{color:#1f8f55}.down{color:var(--red)}
+.note{font-size:1.55u;line-height:1.4;padding:0.7u 1.2u;border-radius:1.5u;margin:0.6u 0;border:0.2u solid var(--ink)}
+.note.bad{background:#ffd9d9}.note.good{background:#d9f7e4}.note.warn{background:#fff1c2}.note.info{background:#e3ecff}
+.note small{display:block;font-size:1.2u;opacity:.8;margin-top:0.3u}
+.plan{list-style:none;padding:0;margin:0 0 1u;font-size:1.8u}
+.plan li{display:flex;align-items:center;gap:1u;padding:0.4u 0;border-bottom:0.15u dashed rgba(43,35,80,.25);font-weight:800}
+.plan svg{width:3u;height:3u}
+/* intro / end */
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4u;padding:4u}
+.center img{height:46u;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 1u 0 rgba(0,0,0,.25))}
+.bubble{width:50u;background:var(--cream);border:0.45u solid var(--ink);border-radius:3u;padding:3u;box-shadow:0 1u 0 rgba(0,0,0,.3)}
+.bubble h1{margin:0 0 1u;font-size:6u;letter-spacing:.08em}
+.bubble h2{margin:0 0 1u;font-size:3.6u}
+.bubble p{font-size:2u;line-height:1.45;margin:0 0 1u}
+.bubble ul{font-size:1.7u;line-height:1.4;padding-left:2.4u;margin:0.5u 0 1u}
+.btns{display:flex;gap:1.2u}
+.dots{display:flex;gap:0.8u;margin:1.4u 0}
+.dots i{width:1.2u;height:1.2u;border-radius:50%;background:#cbbfe9;border:0.15u solid var(--ink)}.dots i.on{background:var(--ink)}
+.small{font-size:1.25u;opacity:.7;margin-top:1.4u}
+.stars{position:absolute;inset:0;background-image:radial-gradient(#fff 0.12u,transparent 0.15u),radial-gradient(#ffe9a8 0.1u,transparent 0.13u);background-size:9u 7u,13u 11u;background-position:0 0,3u 2u;opacity:.5}
+/* floating changes */
+.fl{position:absolute;transform:translateX(-50%);font-weight:900;font-size:2.6u;display:flex;align-items:center;gap:0.3u;animation:flt 1.4s forwards;text-shadow:0 0 0.3u #fff,0 0 0.6u #fff,0 0 1u #fff;white-space:nowrap}
+.fl svg{width:2.8u;height:2.8u}.fl.g{color:#1f8f55}.fl.b{color:#d62b2b}
+@keyframes flt{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-5u}}
+@keyframes lvl{from{height:var(--from)}}
+@keyframes rise{from{transform:translateY(0);opacity:.95}to{transform:translateY(-14u);opacity:0}}
+@keyframes popb{to{transform:scale(1.7);opacity:0}}
+@keyframes grow{from{transform:translate(-50%,-50%) scale(.2);opacity:1}to{transform:translate(-50%,-50%) scale(1.5);opacity:0}}
+@keyframes fruitin{from{transform:scale(0) translateY(2u)}60%{transform:scale(1.3)}}
+@keyframes pulse{50%{opacity:.55}}
+@keyframes pop2{50%{transform:translate(-50%,-50%) scale(1.25)}}
+@keyframes ring{50%{box-shadow:0 0 0 0.9u rgba(239,75,75,.9),0 0 4u 1u rgba(239,75,75,.7)}}
+@keyframes shake{25%{transform:translateX(-0.5u)}75%{transform:translateX(0.5u)}}
+@keyframes bob{50%{transform:translateY(-0.7u)}}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+/* storm sweep */
+#sweep{position:absolute;inset:0;z-index:60;pointer-events:none;overflow:hidden;animation:swfade 3.6s forwards}
+#sweep .band{position:absolute;top:0;bottom:0;width:30u;left:-30u;background:linear-gradient(90deg,transparent,rgba(255,170,60,.55),rgba(255,240,170,.8),rgba(255,170,60,.55),transparent);animation:swband 2.6s .2s ease-in forwards}
+#sweep i{position:absolute;left:-4u;width:1.3u;height:1.3u;border-radius:50%;background:#ffe27a;box-shadow:0 0 1.2u 0.5u rgba(255,150,40,.9),-3u 0 2u 0.2u rgba(255,150,40,.5);animation:swdot var(--d) var(--t) linear forwards;top:var(--y)}
+#sweep .lbl{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-weight:900;font-size:4.5u;color:#fff;text-shadow:0 0.3u 0 #2b2350,0 0 2u #ff9a2e;animation:swlbl 3.2s forwards;white-space:nowrap}
+@keyframes swdot{to{left:105%}}
+@keyframes swband{to{left:105%}}
+@keyframes swfade{0%{background:rgba(255,120,30,0)}30%,70%{background:rgba(255,120,30,.22)}100%{background:rgba(255,120,30,0)}}
+@keyframes swlbl{0%{opacity:0}15%,75%{opacity:1}100%{opacity:0}}
+/* launch movie */
+#movie{position:absolute;inset:0;z-index:80;background:#0e0b24;overflow:hidden;color:#fff}
+#movie .sk{position:absolute;right:2u;top:2u;z-index:5}
+#movie .cap{position:absolute;left:50%;bottom:4u;transform:translateX(-50%);background:#fff4ee;color:#2b2350;border:0.35u solid #2b2350;border-radius:3u;padding:1u 3u;font-weight:900;font-size:2.6u;z-index:4;white-space:nowrap;animation:pop .35s}
+#movie .sc{position:absolute;inset:0;animation:fade .6s}
+#movie .stars2{position:absolute;inset:0;background-image:radial-gradient(#fff 0.1u,transparent 0.15u),radial-gradient(#ffe9a8 0.15u,transparent 0.2u);background-size:9u 11u,17u 13u;background-position:0 0,3u 5u;opacity:.8}
+#movie .stars2.fall{animation:starfall .5s linear infinite}
+@keyframes starfall{to{background-position:0 22u,3u 31u}}
+#movie .astro{position:absolute;left:12%;bottom:10u;height:38u;animation:bob 1.2s ease-in-out infinite}
+#movie .crate{position:absolute;left:46%;bottom:9u;width:24u;height:15u;background:#c9a15a;border:0.45u solid #2b2350;border-radius:1.2u;box-shadow:0 0.6u 0 rgba(0,0,0,.3)}
+#movie .crate:after{content:"MOON";position:absolute;inset:0;display:grid;place-items:center;font-weight:900;color:#7a5726;font-size:3u;opacity:.6}
+#movie .item{position:absolute;width:7u;height:7u;left:var(--x);bottom:var(--y);animation:tocrate .7s var(--t) ease-in forwards;opacity:0}
+#movie .item svg{width:100%;height:100%}
+@keyframes tocrate{0%{opacity:1;transform:translate(0,0) scale(1)}60%{opacity:1;transform:translate(calc(var(--dx)*.7),-14u) scale(1.1)}100%{opacity:0;transform:translate(var(--dx),-3u) scale(.5)}}
+#movie .big{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:22u;font-weight:900;text-shadow:0 0.8u 0 #2b2350,0 0 3u #ffb02e;animation:cnt .55s forwards}
+@keyframes cnt{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}30%{transform:translate(-50%,-50%) scale(1.1);opacity:1}100%{transform:translate(-50%,-50%) scale(.9);opacity:.2}}
+#movie .pad{position:absolute;left:0;right:0;bottom:0;height:11u;background:linear-gradient(#5d5380,#3a3258);border-top:0.5u solid #2b2350}
+#movie .rocket{position:absolute;left:50%;bottom:9u;width:12u;margin-left:-6u;z-index:3}
+#movie .rocket svg{width:100%;display:block;overflow:visible}
+#movie .rocket.shake{animation:rshake .08s linear infinite}
+#movie .rocket.lift{animation:rlift 2.4s cubic-bezier(.5,0,.9,.4) forwards}
+@keyframes rshake{25%{transform:translate(-0.25u,0.1u)}75%{transform:translate(0.25u,-0.1u)}}
+@keyframes rlift{0%{transform:translateY(0)}100%{transform:translateY(-120u)}}
+#movie .flame{transform-origin:50% 0;animation:flick .09s ease-in-out infinite alternate}
+@keyframes flick{from{transform:scaleY(.8) scaleX(.9)}to{transform:scaleY(1.25) scaleX(1.05)}}
+#movie .smoke{position:absolute;bottom:8u;width:9u;height:9u;border-radius:50%;background:#e6e1f5;opacity:0;left:calc(50% + var(--sx));animation:smk 1.6s var(--t) ease-out forwards}
+@keyframes smk{0%{opacity:.9;transform:translate(0,0) scale(.4)}100%{opacity:0;transform:translate(var(--mx),-3u) scale(3)}}
+#movie .earth{position:absolute;left:-14u;bottom:-14u;width:40u;height:40u;border-radius:50%;background:radial-gradient(circle at 35% 35%,#7fd0ff,#2d78d8 55%,#1d4a9a);box-shadow:0 0 4u rgba(120,200,255,.5);animation:eshrink 1.8s forwards}
+@keyframes eshrink{to{transform:scale(.35) translate(-30%,30%)}}
+#movie .moonbig{position:absolute;right:14%;top:12%;width:20u;height:20u;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,#d7d3e6 60%,#a9a3c4);box-shadow:0 0 5u rgba(255,255,255,.4);animation:mgrow 1.8s ease-in forwards}
+#movie .moonbig:before,#movie .moonbig:after{content:"";position:absolute;border-radius:50%;background:rgba(120,112,150,.35)}
+#movie .moonbig:before{width:5u;height:5u;left:22%;top:30%}
+#movie .moonbig:after{width:3.4u;height:3.4u;left:58%;top:58%}
+@keyframes mgrow{to{transform:scale(3.2) translate(-8%,18%)}}
+#movie .rocket.cruise{left:30%;bottom:20%;width:9u;animation:rcruise 1.8s ease-in-out forwards;transform:rotate(38deg)}
+@keyframes rcruise{0%{left:18%;bottom:14%;transform:rotate(38deg) scale(1)}100%{left:62%;bottom:50%;transform:rotate(38deg) scale(.55)}}
+#movie .fadeout{position:absolute;inset:0;background:#0e0b24;animation:fadeo .8s forwards;z-index:6}
+@keyframes fadeo{from{opacity:0}to{opacity:1}}
+
+@keyframes fade{from{opacity:0}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="bg" alt="">
+  <div id="layer"></div>
+  <div id="hud"></div>
+  <div id="modal"></div>
+  <div id="fx"></div>
+  <button id="snd" aria-label="Sound on or off">🔊</button>
+</div>
+
+<script type="application/json" id="cfg-embedded">__CFG__</script>
+<script type="application/json" id="ev-embedded">__EVENTS__</script>
+<script>
+const $ = s => document.querySelector(s);
+let CFG, EVENTS;
+const ROOMS = {
+  oxygen_room: {img:'assets/oxygen.jpg'},
+  greenhouse: {img:'assets/greenhouse.jpg'},
+  power_room: {img:'assets/power.jpg'},
+  radiation_shelter: {img:'assets/shelter.jpg', pos:'50% 25%'}
+};
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const fmtDate = iso => { const d=new Date(iso); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')} UTC`; };
+const fmtDay = iso => { const d=new Date(iso); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+const fmtTime = iso => { const d=new Date(iso); return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`; };
+const n1 = x => (Math.round(x*10)/10).toFixed(1);
+const unitTxt = x => { const r = Math.round(Math.abs(x)*10)/10; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+const UNIT = {power:10, water:1, food:0.5, oxygen:1};   // 1 tick on a meter
+
+/* ---------- icons (no numbers needed) ---------- */
+const ICON = {
+  drop:'<svg viewBox="0 0 24 24"><path d="M12 2.5S5 10.5 5 15a7 7 0 0014 0c0-4.5-7-12.5-7-12.5z" fill="#5aa9f0" stroke="#2b2350" stroke-width="1.6"/><path d="M9 15a3 3 0 002.5 3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24"><path d="M13.5 2L4.5 14h6l-1 8 9-12h-6z" fill="#ffc83d" stroke="#2b2350" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  apple:'<svg viewBox="0 0 24 24"><path d="M12 7.5c-3-2-7 0-7 5 0 4 3 8 5 8 1 0 1.5-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8 0-5-4-7-7-5z" fill="#ef4b4b" stroke="#2b2350" stroke-width="1.6"/><path d="M12 7.5c0-2 1-4 3-4" stroke="#2b8a4e" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+  bubble:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="#bfeaf8" stroke="#2b2350" stroke-width="1.6"/><path d="M7 11a5.5 5.5 0 013.5-4.2" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="15.5" cy="16" r="1.4" fill="#fff"/></svg>',
+  cal:'<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3" fill="#fff" stroke="#2b2350" stroke-width="1.6"/><rect x="3" y="4.5" width="18" height="5" rx="2" fill="#f58aa6" stroke="#2b2350" stroke-width="1.6"/><g fill="#2b2350"><circle cx="8" cy="14" r="1.1"/><circle cx="12" cy="14" r="1.1"/><circle cx="16" cy="14" r="1.1"/><circle cx="8" cy="17.5" r="1.1"/><circle cx="12" cy="17.5" r="1.1"/></g></svg>',
+  heart:'<svg viewBox="0 0 24 24"><path d="M12 21s-8.5-5.5-8.5-11.2A4.6 4.6 0 0112 7.2a4.6 4.6 0 018.5 2.6C20.5 15.5 12 21 12 21z" fill="#f4577d" stroke="#2b2350" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  tomato:'<svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="8" fill="#ee4a3a" stroke="#2b2350" stroke-width="1.6"/><path d="M7.5 7.5l4.5 2 4.5-2M12 9.5V4" stroke="#2b8a4e" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12a4 4 0 012-3" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+  bulb:'<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0012 3z" fill="#ffe27a" stroke="#2b2350" stroke-width="1.6"/><path d="M10 20.5h4" stroke="#2b2350" stroke-width="2" stroke-linecap="round"/></svg>',
+  bulboff:'<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0012 3z" fill="#ddd8ea" stroke="#2b2350" stroke-width="1.6"/><path d="M10 20.5h4" stroke="#2b2350" stroke-width="2" stroke-linecap="round"/></svg>',
+  shield:'<svg viewBox="0 0 24 24"><path d="M12 2.5l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10v-6z" fill="#f58aa6" stroke="#2b2350" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  leaf:'<svg viewBox="0 0 24 24"><path d="M5 19C5 10 10 5 20 4c0 10-5 15-14 15z" fill="#5fcf8a" stroke="#2b2350" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 19l8-8" stroke="#2b2350" stroke-width="1.6" fill="none"/></svg>'
+};
+const small = (svg, s='2.4u') => svg.replace('<svg', `<svg style="width:${s};height:${s}"`);
+
+/* ---------- sound & voice (WebAudio, no files) ---------- */
+const SND = {on:true, ctx:null};
+try { SND.on = localStorage.getItem('moonie_sound') !== 'off'; } catch(_) {}
+function tone(f, d=0.12, type='sine', vol=0.08, when=0){
+  if (!SND.on) return;
+  try {
+    if (!SND.ctx) SND.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const c = SND.ctx, t = c.currentTime + when, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d + 0.02);
+  } catch(_) {}
+}
+const SFX = {
+  click:()=>tone(520,.07,'triangle'), pop:()=>{tone(700,.08);tone(950,.06,'sine',.06,.05)},
+  water:()=>{tone(400,.15);tone(300,.15,'sine',.07,.08)}, chime:()=>[660,880,1100].forEach((f,i)=>tone(f,.25,'sine',.07,i*.09)),
+  bloop:()=>{tone(300,.12);tone(500,.14,'sine',.07,.08)}, bad:()=>{tone(200,.25,'sawtooth',.06);tone(150,.3,'sawtooth',.06,.15)},
+  alarm:()=>{tone(880,.18,'square',.05);tone(660,.18,'square',.05,.2)}, win:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.3,'triangle',.08,i*.14)),
+  lose:()=>[400,330,260].forEach((f,i)=>tone(f,.3,'triangle',.07,i*.2)), safe:()=>[523,784].forEach((f,i)=>tone(f,.25,'triangle',.08,i*.12))
+};
+const sfx = n => { try { SFX[n] && SFX[n](); } catch(_) {} };
+/* Voice: plays human-sounding files from assets/voice/ (made with Gemini by make_voices.py).
+   If a file is missing, falls back to the browser's built-in voice. */
+const voiceClean = t => String(t).replace(/<[^>]+>/g,' ').replace(/\p{Extended_Pictographic}/gu,'').replace(/\s+/g,' ').trim();
+function voiceKey(t){            // FNV-1a hash of the clean text (same in make_voices.json)
+  let h = 0x811c9dc5; const bytes = new TextEncoder().encode(t);
+  for (const b of bytes) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8,'0');
+}
+let voiceAudio = null;
+function stopVoice(){
+  try { if (voiceAudio) { voiceAudio.onerror = null; voiceAudio.pause(); voiceAudio = null; } } catch(_) {}
+  try { 'speechSynthesis' in window && speechSynthesis.cancel(); } catch(_) {}
+}
+function robotSay(clean, rate){
+  if (!('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(clean); u.rate = rate; u.pitch = 0.95;
+    const en = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+    const v = en.find(v => /natural|online/i.test(v.name) && /guy|davis|ryan|christopher|eric|male|david|daniel|alex|mark|james/i.test(v.name)) || en.find(v => /google uk english male|daniel|alex|david|mark|james|fred|guy/i.test(v.name)) || en.find(v => /male/i.test(v.name) && !/female/i.test(v.name));
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch(_) {}
+}
+function say(text, rate=0.95){
+  if (!SND.on) return;
+  const clean = voiceClean(text); if (!clean) return;
+  stopVoice();
+  try {
+    const a = new Audio('assets/voice/' + voiceKey(clean) + '.wav'); voiceAudio = a;
+    a.onerror = () => { if (voiceAudio === a) { voiceAudio = null; robotSay(clean, rate); } };
+    const pr = a.play(); if (pr && pr.catch) pr.catch(() => { if (voiceAudio === a) { voiceAudio = null; robotSay(clean, rate); } });
+  } catch(_) { robotSay(clean, rate); }
+}
+function setSoundBtn(){ const b = $('#snd'); if (b) { b.textContent = SND.on ? '🔊' : '🔇'; b.title = SND.on ? 'Sound on' : 'Sound off'; } }
+$('#snd').addEventListener('click', () => {
+  SND.on = !SND.on; try { localStorage.setItem('moonie_sound', SND.on ? 'on' : 'off'); } catch(_) {}
+  if (!SND.on) stopVoice();
+  setSoundBtn(); if (SND.on) sfx('chime');
+});
+setSoundBtn();
+document.addEventListener('click', e => { if (e.target.closest('.btn,.ch,.hot,.nextday,.back,.pk')) sfx('click'); });
+
+/* ---------- real storm data helpers ---------- */
+function delayMin(ev){
+  const s = ev.sep || {}, t0 = new Date(ev.flare.date).getTime();
+  const times = (s.records || []).map(r => new Date(r.date).getTime());
+  if (s.date) times.push(new Date(s.date).getTime());
+  const d = times.filter(t => t > t0).sort((a,b)=>a-b)[0];
+  return d ? (d - t0) / 60000 : null;          // minutes from flare peak to first SEP record in DONKI
+}
+const durTxt = m => m < 90 ? `${Math.round(m)} minutes` : `${Math.round(m/60)} hours`;
+function dashSeconds(ev){
+  const c = CFG.radiation.countdown || {min_s:6, max_s:12, default_s:8}, d = delayMin(ev);
+  if (d == null) return c.default_s;
+  const lo = Math.log10(47), hi = Math.log10(368);               // real delays in our data: ~47 min ... ~6 h
+  const t = (Math.log10(Math.max(d,1)) - lo) / (hi - lo);
+  return Math.max(c.min_s, Math.min(c.max_s, Math.round(c.min_s + t * (c.max_s - c.min_s))));
+}
+function stormViz(ev, timeline=true){
+  const d = delayMin(ev);
+  const dots = Array.from({length:9}, (_,i) => `<i class="pt" style="top:${12 + (i*37)%76}%;animation-delay:${(i*0.27).toFixed(2)}s"></i>`).join('');
+  const tl = `<div class="tl"><div><b>☀ ${fmtTime(ev.flare.date)} UTC</b><span>Flare!</span></div>
+    <div><b>+8 min</b><span>Light reaches the Moon</span></div>
+    <div><b>${d!=null?durTxt(d)+' later':'—'}</b><span>${d!=null?'Sun sparks arrive':'No sun sparks recorded'}</span></div></div>`;
+  return `<div class="sviz"><div class="sun"></div>${d!=null?dots:''}<div class="moonb"></div></div>${timeline?tl:''}`;
+}
+
+/* ---------- Raed's mood ---------- */
+function mood(){
+  const R = CFG.resources, f = forecast(), w = warnOf(f);
+  if (S.hearts <= 1) return {face:'scared', text:"I don't feel well..."};
+  if (S.watch && !S.prepared) return {face:'scared', text:'Solar storm! The shelter!'};
+  if (S.oxygen < R.oxygen.low_warning_below || w.oxygen) return {face:'scared', text:'I need more air!'};
+  if (S.water < R.water.low_warning_below || w.water) return {face:'grumpy', text:"I'm thirsty..."};
+  if (S.food < R.food.low_warning_below || w.food) return {face:'grumpy', text:"I'm hungry..."};
+  if (S.watch) return {face:'surprised', text:'Shelter is ready!'};
+  if (S.planReady) return {face:'joy', text:'Great plan!'};
+  return {face:'smile', text:'Ready to plan!'};
+}
+
+/* ---------- state ---------- */
+let S;
+const params = () => new URLSearchParams(location.search);
+function newGame(forcedId){
+  const R = CFG.resources, P = params(), rad = CFG.radiation;
+  let ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+  if (P.get('event')) ev = EVENTS.find(e => String(e.id)===P.get('event')) || ev;
+  if (forcedId) ev = EVENTS.find(e => String(e.id)===String(forcedId)) || ev;
+  let eday = rad.emergency_day_min + Math.floor(Math.random()*(rad.emergency_day_max-rad.emergency_day_min+1));
+  if (P.get('emergency')) eday = +P.get('emergency');
+  S = { scene:'hub', day:1, hearts:CFG.game.start_hearts,
+    oxygen:R.oxygen.start, water:R.water.start, food:R.food.start,
+    levels:{oxygen_room:'off', greenhouse:'off'}, planReady:false, gh:[], tp:{}, ret:null, manual:0, mol:[false,false], molOpen:false, molRounds:0, fxMol:null, o2credit:0, flow:null, dayStart:null,
+    prepared:false, watch:null, event:ev, emergencyDay:eday, pendingStorm:null, stormDone:false, storm:null,
+    seen:new Set(), mistakes:[], lostRecently:false };
+  startDay();
+}
+const L = room => CFG.rooms[room].levels[S.levels[room]];
+const mod = () => (CFG.days && CFG.days[S.day-1]) || {};
+const budget = () => CFG.resources.power.daily_budget + (mod().power || 0);
+const used = () => CFG.resources.power.baseline_use + L('oxygen_room').power_kwh + L('greenhouse').power_kwh + (S.prepared ? CFG.rooms.radiation_shelter.prepare_cost_kwh : 0) + S.manual * CFG.rooms.oxygen_room.manual.power_kwh;
+const free = () => budget() - used();
+const waterUse = () => CFG.resources.water.daily_use + (mod().water_use || 0);
+const foodUse = () => CFG.resources.food.daily_use + (mod().food_use || 0);
+const nPlants = () => CFG.rooms.greenhouse.plants || 4;
+const perPlant = () => { const h = CFG.rooms.greenhouse.levels.high; return {food:h.food_kg/nPlants(), water:h.water_l/nPlants()}; };
+const litPlants = () => Math.min(nPlants(), Math.round(L('greenhouse').food_kg / perPlant().food));
+const pendingFood = () => S.gh.reduce((a,n)=>a+n,0) * perPlant().food;
+
+function startDay(){
+  S.prepared = false; S.watch = null; S.planReady = false; S.ret = null;
+  S.levels = {oxygen_room:'off', greenhouse:'off'};          // a fresh decision every day
+  S.gh = Array(nPlants()).fill(0);
+  S.o2credit = 0; S.manual = 0; S.mol = [false,false]; S.molOpen = false; S.molRounds = 0;
+  S.dayStart = {oxygen:S.oxygen, water:S.water, food:S.food};
+  S.flow = {oxygen:{in:0,out:0}, water:{in:0,out:0}, food:{in:0,out:0}};
+  const m = mod();
+  if (S.day > 1) modal({title:`Day ${S.day}: ${m.title||''}`, guide:true, body:`<p>${m.text||''}</p>`});
+  clearInterval(S.stormTimer); const old = $('#stormbar'); if (old) old.remove();
+  S.storm = null; S.stormDone = false; S.stormNote = null;
+  S.pendingStorm = (S.day === S.emergencyDay) ? S.event : null;   // the warning comes later, after the player has planned
+}
+
+const evInfo = ev => `<div class="evinfo"><span class="tag">REAL NASA EVENT</span>The Sun really did this on ${fmtDay(ev.flare.date)}.</div>`;
+function nasaDetails(ev){
+  const f = ev.flare, s = ev.sep || {};
+  const rd = s.readings || (s.proton_10MeV != null ? [{time:s.reading_time, proton_10MeV:s.proton_10MeV}] : []);
+  const list = rd.filter(x => x.time).map(x => `${n1(x.proton_10MeV)} at ${fmtTime(x.time)} UTC`).join(', ');
+  return `<details><summary>Show the real NASA data</summary>
+    <p>Flare class <b>${f.class}</b>, peak ${fmtDate(f.date)}${f.region?`, region ${f.region}`:''}.</p>
+    <p>Linked sun-spark event in NASA DONKI: <b>${s.found_in_donki?'yes':'none found'}</b>.</p>
+    ${list?`<p>Chart readings (10 MeV protons): ${list}.</p>`:''}</details>`;
+}
+
+/* ---------- modal queue ---------- */
+const Q = []; let current = null;
+function modal(o){ Q.push(o); if (!current) nextModal(); }
+function nextModal(){
+  const o = Q.shift(); current = o || null;
+  const m = $('#modal');
+  if (!o) { m.innerHTML=''; stopVoice(); return; }
+  if (o.guide) say(o.say || o.body);
+  m.innerHTML = `<div class="mback"><div class="card ${o.cls||''}">${o.guide?'<img class="mg" src="assets/astronaut.png" alt="Raed">':''}<div class="mbody"><h2>${o.title}</h2>${o.body}<div class="mbtns">${(o.buttons||[{label:'Got it!'}]).map((b,i)=>`<button class="btn ${b.cls||''} big" data-mb="${i}">${b.label}</button>`).join('')}</div></div></div></div>`;
+}
+$('#modal').addEventListener('click', e => {
+  const b = e.target.closest('[data-mb]'); if (!b || !current) return;
+  const o = current; current = null; $('#modal').innerHTML='';
+  const btn = (o.buttons||[{}])[+b.dataset.mb] || {};
+  btn.fn && btn.fn();
+  if (!current) nextModal();
+});
+function showCard(key){ modal({title:'💡 Did you know?', guide:true, body:`<p>${CFG.fact_cards[key]}</p>`}); }
+function cardOnce(key){ if (S.seen.has(key)) return; S.seen.add(key); showCard(key); }
+
+/* ---------- visible changes ---------- */
+function floatAt(sel, html, good){
+  const el = document.querySelector(sel); if (!el) return;
+  const st = $('#stage').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const f = document.createElement('div'); f.className = 'fl ' + (good?'g':'b'); f.innerHTML = html;
+  f.style.left = (r.left - st.left + r.width/2) + 'px'; f.style.top = (r.top - st.top + r.height*0.7) + 'px';
+  $('#fx').appendChild(f); setTimeout(() => f.remove(), 1500);
+}
+function delta(kind, amount){
+  const u = amount / UNIT[kind]; if (Math.abs(u) < 0.05) return;
+  const ic = {power:ICON.bolt, water:ICON.drop, food:ICON.apple, oxygen:ICON.bubble}[kind];
+  floatAt(`[data-hud="${kind}"]`, `${u>0?'+':'−'}${unitTxt(u)}${ic}`, u>0);
+}
+
+/* ---------- actions ---------- */
+function setLevel(room, lvl){
+  const cur = L(room).power_kwh, nxt = CFG.rooms[room].levels[lvl].power_kwh;
+  if (nxt - cur > free()) { shake(room+lvl); return; }
+  S.levels[room] = lvl;
+  let dO = 0;
+  if (room === 'oxygen_room') {            // the air machine fills the tank right away
+    const prod = CFG.rooms.oxygen_room.levels[lvl].oxygen_kg;
+    dO = prod - S.o2credit; S.oxygen += dO; S.o2credit = prod; S.flow.oxygen.in = prod + S.manual * CFG.rooms.oxygen_room.manual.oxygen_kg;
+  }
+  render(); delta('power', -(nxt-cur)); if (dO) delta('oxygen', dO);
+}
+function togglePrep(){
+  const c = CFG.rooms.radiation_shelter.prepare_cost_kwh;
+  if (S.prepared) return;
+  if (free() < c) { shake('prep'); floatAt('[data-id="prep"]', 'Not enough power! Turn something down in the Power Room.', false); return; }
+  S.prepared = true; render(); delta('power', -c);
+}
+function shake(id){ const el=document.querySelector(`[data-id="${id}"]`); if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
+function go(scene){
+  if (scene === 'room:power_room' && S.scene !== 'room:power_room') S.ret = S.scene;
+  S.scene = scene; if (scene !== 'room:oxygen_room') S.molOpen = false; render();
+  if (scene.startsWith('room:')) {
+    const r = scene.slice(5);
+    if (r==='greenhouse') { cardOnce('food'); cardOnce('water'); }
+    else cardOnce({oxygen_room:'oxygen', power_room:'power', radiation_shelter:'shelter'}[r]);
+  }
+}
+function waterPlant(i){
+  const per = perPlant(), spend = Math.min(per.water, Math.max(0, S.water));
+  const empty = S.water < per.water;
+  S.water = Math.max(0, S.water - spend); S.flow.water.out += spend;
+  let msg = '';
+  if (i >= litPlants()) msg = 'Too dark! No fruit grew.';
+  else if (!empty) { S.gh[i]++; S.fx = {plant:i}; }
+  if (empty) msg = 'The tank is empty!' + (msg ? ' ' + msg : '');
+  render(); sfx('water');
+  if (spend > 0) delta('water', -spend);
+  if (msg) floatAt(`[data-plant="${i}"]`, msg, false);
+  if (empty) shake('tank');
+}
+function splitO(i){
+  const M = CFG.rooms.oxygen_room.manual;
+  if (S.mol[i]) return;
+  if (free() < M.power_kwh) { shake('mol'+i); floatAt(`[data-o="${i}"]`, 'Not enough power!', false); return; }
+  if (S.water < M.water_l) { shake('mol'+i); floatAt(`[data-o="${i}"]`, 'No water left to split!', false); return; }
+  S.manual++; S.mol[i] = true; S.fxMol = i;
+  S.water -= M.water_l; S.flow.water.out += M.water_l;
+  S.oxygen += M.oxygen_kg; S.flow.oxygen.in += M.oxygen_kg;
+  render(); sfx('bloop'); delta('power', -M.power_kwh); delta('water', -M.water_l); delta('oxygen', M.oxygen_kg);
+}
+function molHTML(fxm){
+  const M = CFG.rooms.oxygen_room.manual, done = S.mol.filter(Boolean).length;
+  const mols = S.mol.map((sp,i) => `<div class="mol">
+      <svg class="bonds ${sp?'gone':''}" viewBox="0 0 24 17"><path d="M5.5 5L12 11L18.5 5" stroke="#2b2350" stroke-width="0.7" fill="none" stroke-linecap="round"/></svg>
+      <div class="atom H ${sp?'gone':''} ${fxm===i?'fly l':''}" style="left:5.5u;top:5u">H</div>
+      <div class="atom H ${sp?'gone':''} ${fxm===i?'fly r':''}" style="left:18.5u;top:5u">H</div>
+      <button class="atom O ${sp?'made':''}" data-o="${i}" data-id="mol${i}" style="left:12u;top:11u" aria-label="Oxygen atom">${sp?small(ICON.bubble,'6u'):'O'}</button>
+    </div>`).join('');
+  const stage = S.molRounds > 0 ? 2 : done;
+  const cost = `${small(ICON.bolt)}−${unitTxt(M.power_kwh/UNIT.power)} ${small(ICON.drop)}−${unitTxt(M.water_l/UNIT.water)} → ${small(ICON.bubble)}+${unitTxt(M.oxygen_kg/UNIT.oxygen)}`;
+  return `<div class="molbg"><div class="molcard">
+    <h2>Make oxygen from water!</h2>
+    <div class="mols">${mols}</div>
+    <div class="molcost">${done===2?'<b>You made oxygen!</b> The H atoms floated away as hydrogen gas.':'Tap an <b>O</b> circle to split the water.'}<br><span class="chip" style="display:inline-flex;margin-top:0.6u">Each tap: ${cost}</span></div>
+    <div class="note info">${CFG.molecule_facts[stage]}</div>
+    <div class="btns">${done===2?'<button class="btn green" data-act="molmore">Make more ↻</button>':''}<button class="btn grey" data-act="molclose">✕ Done</button></div>
+  </div></div>`;
+}
+function pickFruit(i){
+  if (!(S.gh[i] > 0)) return;
+  const per = perPlant(), n = S.gh[i], gain = n * per.food; S.gh[i] = 0;
+  S.food += gain; S.flow.food.in += gain;
+  render(); sfx('chime'); delta('food', gain);
+}
+
+function forecast(){
+  const R = CFG.resources, O = L('oxygen_room');
+  return {
+    oxygen: Math.min(R.oxygen.max, S.oxygen - R.oxygen.daily_use),
+    water: Math.min(R.water.max, S.water - waterUse() + R.water.daily_recovered),
+    food: Math.min(R.food.max, S.food + pendingFood() - foodUse())
+  };
+}
+const warnOf = f => ({oxygen: f.oxygen <= CFG.resources.oxygen.low_warning_below, water: f.water <= CFG.resources.water.low_warning_below, food: f.food <= CFG.resources.food.low_warning_below});
+
+/* ---------- ending a day (with a go-back step) ---------- */
+function nextDayClicked(){
+  if (S.storm || S.watch) {
+    modal({title:'The storm is here!', cls:'red', guide:true, body:`<p>Get to the shelter first! Prepare it, then get inside.</p>`, buttons:[{label:'🛡 Go to the shelter', cls:'green', fn:()=>go('room:radiation_shelter')}]});
+    return;
+  }
+  if (!S.planReady) {
+    modal({title:'Plan your day first!', guide:true, body:`<p>Raed needs a plan before the day can end. Open the <b>Power Room</b> and choose how much power the air machine and the plant lights get.</p>`,
+      buttons:[{label:'⚡ Go to Power Room', cls:'green', fn:()=>go('room:power_room')},{label:'Not yet', cls:'grey'}]});
+    return;
+  }
+  const f = forecast(), w = warnOf(f), lv = k => S.levels[k].toUpperCase();
+  const row = (ic, txt, bad) => `<li>${small(ic,'3u')}<span style="${bad?'color:#d62b2b':''}">${txt}</span></li>`;
+  let rows = row(ICON.bubble, `Air machine: ${lv('oxygen_room')}`) + row(ICON.bulb, `Plant lights: ${lv('greenhouse')}`);
+  if (S.watch) rows += row(ICON.shield, S.prepared ? 'Shelter: READY' : 'Shelter: NOT ready!', !S.prepared);
+  const warns = [];
+  if (f.oxygen <= 0) warns.push('The air will run out!'); else if (w.oxygen) warns.push('Air is getting low.');
+  if (f.water <= 0) warns.push('The water will run out!'); else if (w.water) warns.push('Water is getting low.');
+  if (f.food <= 0) warns.push('The food will run out!'); else if (w.food) warns.push('Food is getting low.');
+  const wHtml = warns.map(t => `<div class="note warn">⚠ ${t}</div>`).join('');
+  modal({title:`Finish Day ${S.day}?`, cls: (S.watch&&!S.prepared)?'red':'', body:`<ul class="plan">${rows}</ul>${wHtml}<p style="font-size:1.5u">Once you finish, the day cannot be undone.</p>`,
+    buttons:[{label:'◀ Go back', cls:'grey'}, {label:'Finish the day ✔', cls:'green', fn:endDay}]});
+}
+
+/* ---------- the mid-day solar storm ---------- */
+function triggerStorm(){
+  const ev = S.pendingStorm; S.pendingStorm = null; S.watch = {event:ev};
+  const secs = dashSeconds(ev), d = delayMin(ev), c = CFG.rooms.radiation_shelter.prepare_cost_kwh;
+  if (!S.seen.has('radiation')) { S.seen.add('radiation'); showCard('radiation'); }   // explain WHY it is bad first
+  const real = d != null ? `In real life the sun sparks took about <b>${durTxt(d)}</b> to arrive. In the game you only get <b>${secs} seconds</b>!` : `In the game you get <b>${secs} seconds</b> to hide!`;
+  render();
+  modal({title:'☀ Warning from NASA!', cls:'red', guide:true, say: CFG.messages.watch + ' Quick! Prepare the shelter and get inside!',
+    body:`<p>${CFG.messages.watch}</p>${evInfo(ev)}${stormViz(ev)}<p style="font-size:1.5u">${real}</p>
+      <p style="font-size:1.5u"><b>Quick!</b> Open the <b>Radiation Shelter</b>, prepare it (it needs ${Math.round(c/10)} power icons), then get inside. If you are short of power, turn something down in the Power Room.</p>`,
+    buttons:[{label:`Go! ${secs} seconds ⏱`, cls:'red', fn:()=>startStormTimer(secs)}]});
+}
+function startStormTimer(secs){
+  S.storm = {left:secs, total:secs};
+  const el = document.createElement('div'); el.id = 'stormbar';
+  el.innerHTML = `<span>☀ SUN SPARKS ARRIVING!</span><div class="dashbar"><i style="width:100%"></i></div><b id="stormn">${secs}</b><span>s</span><button class="btn green" data-gostorm="1">🛡 Shelter</button>`;
+  $('#stage').appendChild(el); sfx('alarm'); render();
+  S.stormTimer = setInterval(() => {
+    if (!S.storm || current) return;                 // the clock waits while a pop-up is open
+    S.storm.left--; sfx('alarm');
+    const n = $('#stormn'), bar = el.querySelector('.dashbar i');
+    if (n) n.textContent = Math.max(0, S.storm.left);
+    if (bar) bar.style.width = Math.max(0, S.storm.left / S.storm.total * 100) + '%';
+    if (S.storm.left <= 0) resolveStorm(false);
+  }, 1000);
+}
+function resolveStorm(ok){
+  if (!S.watch) return;
+  clearInterval(S.stormTimer); const bar = $('#stormbar'); if (bar) bar.remove(); S.storm = null;
+  const ev = S.watch.event, rad = CFG.radiation, M = CFG.messages;
+  const lose = (n, why) => { S.hearts = Math.max(0, S.hearts - n); S.lostRecently = true; if (why) S.mistakes.push(why); };
+  const linked = ev.sep && ev.sep.found_in_donki === true;
+  let arrives = linked, chance = null;
+  if (!linked) { chance = rad.random_chance_if_not_linked[ev.level]; arrives = Math.random() < chance; }
+  const why = linked ? `NASA recorded real sun sparks after this Sun flash.`
+    : `NASA did not record sun sparks after this flash, so the game rolled a dice (a simplified game rule).`;
+  const sheltered = S.prepared && ok;
+  let text, type, title;
+  if (arrives && sheltered) { text = M.radiation_blocked; type='good'; title='🛡 Safe!'; sfx('safe'); }
+  else if (arrives) { text = S.prepared ? M.too_slow : M.radiation_hit; type='bad'; title='💥 The storm hit!'; lose(rad.hearts_lost_if_unprotected[ev.level], S.prepared ? 'Running to the shelter too slowly during a solar storm.' : 'Not preparing the shelter in time during a solar storm.'); }
+  else if (sheltered) { text = M.false_alarm; type='info'; title='The storm passed'; }
+  else if (S.prepared) { text = M.too_slow_lucky; type='info'; title='The storm passed'; }
+  else { text = M.lucky; type='info'; title='The storm passed'; }
+  S.stormNote = {type, text:'☀ ' + text, small: why, extra: nasaDetails(ev)};
+  S.watch = null; S.stormDone = true;
+  stormSweep(arrives, () => {
+    render(); if (type === 'bad') sfx('bad');
+    modal({title, cls: type==='bad'?'red':type==='good'?'green':'', guide:true, say:text,
+      body:`<p>${text}</p><div class="note ${type}"><small style="margin:0">${why}</small>${nasaDetails(ev)}</div>`,
+      buttons:[{label: S.hearts<=0 ? 'Continue' : 'Back to base', cls:'green', fn:()=>{ if (S.hearts<=0) finish(false); }}]});
+  });
+}
+
+function endDay(){
+  const R = CFG.resources, M = CFG.messages, O = L('oxygen_room');
+  const before = S.dayStart, flow = S.flow;
+  const leftover = S.gh.reduce((a,n)=>a+n,0);
+  flow.oxygen.out += R.oxygen.daily_use; flow.water.out += waterUse(); flow.water.in += R.water.daily_recovered;
+  flow.food.out += foodUse(); flow.food.in += pendingFood();
+  const after = {
+    oxygen: Math.min(R.oxygen.max, S.oxygen - R.oxygen.daily_use),
+    water: Math.min(R.water.max, S.water - waterUse() + R.water.daily_recovered),
+    food: Math.min(R.food.max, S.food + pendingFood() - foodUse())
+  };
+  const notes = [];
+  if (leftover) notes.push({type:'info', text:`🍅 Raed picked ${leftover} leftover fruit${leftover>1?'s':''} before the day ended.`});
+  const lose = (n, why) => { S.hearts = Math.max(0, S.hearts - n); S.lostRecently = true; if (why) S.mistakes.push(why); };
+  if (S.stormNote) { notes.push(S.stormNote); S.stormNote = null; }
+  const names = {oxygen:'Air', water:'Water', food:'Food'};
+  for (const k of ['oxygen','water','food']) {
+    if (after[k] <= 0.0001) {
+      lose(1, M[k+'_empty']);
+      notes.push({type:'bad', text:'💔 '+M[k+'_empty'], small:'Raed lost a heart. A supply drop gave one day of it so you can fix the plan.'});
+      after[k] = CFG.on_empty.emergency_refill_one_day[k];
+    }
+  }
+  for (const k of ['oxygen','water','food']) if (after[k] < R[k].low_warning_below && after[k] > 0) notes.push({type:'warn', text:'⚠ '+M.low_warning.replace('{name}', names[k])});
+  const meter = (k,v) => `<span class="mt ${k}" style="--n:${R[k].max/UNIT[k]}"><i style="width:${Math.max(0,Math.min(100,v/R[k].max*100))}%"></i></span>`;
+  const rows = ['oxygen','water','food'].map(k => {
+    const d = after[k]-before[k], ic = {oxygen:ICON.bubble, water:ICON.drop, food:ICON.apple}[k], fl = flow[k];
+    const parts = (fl.in>0.001?`<span class="up">+${unitTxt(fl.in/UNIT[k])}</span> `:'') + `<span class="down">−${unitTxt(fl.out/UNIT[k])}</span>`;
+    return `<tr><td>${small(ic,'2.6u')}</td><td>${meter(k,before[k])} → ${meter(k,after[k])}</td><td style="font-size:1.4u">${parts}</td><td class="${d>=0?'up':'down'}">${d>=0?'+':'−'}${unitTxt(d/UNIT[k])}</td></tr>`;
+  }).join('');
+  Object.assign(S, after);
+  const dead = S.hearts <= 0, won = !dead && S.day >= CFG.game.days_to_survive;
+  const notesHtml = notes.map(n => `<div class="note ${n.type}">${n.text}${n.small?`<small>${n.small}</small>`:''}${n.extra||''}</div>`).join('');
+  const day = S.day;
+  S.watch = null; S.prepared = false; S.dashOk = undefined;
+  render(); if (S.lostRecently && S.hearts < CFG.game.max_hearts) sfx('bad');
+  modal({title:`Day ${day} report`, cls: dead?'red':'', body:`<table class="rep">${rows}</table>${notesHtml||'<div class="note good">A calm day. Nice planning!</div>'}`,
+    buttons:[{label: dead ? 'Continue' : won ? 'Finish mission 🚀' : `Start Day ${day+1} ▶`, cls:'green', fn:()=>{
+      if (dead) return finish(false);
+      if (won) return finish(true);
+      S.day++; S.lostRecently=false; startDay(); render();
+    }}]});
+}
+function finish(won){ S.scene = won ? 'win' : 'lose'; render(); sfx(won ? 'win' : 'lose'); }
+
+/* ---------- rendering ---------- */
+function meterHTML(k, v, max, warn, will){
+  return `<span class="mt ${k} ${warn?'low':''} ${will?'will':''}" style="--n:${max/UNIT[k]}"><i style="width:${Math.max(0,Math.min(100,v/max*100))}%"></i></span>`;
+}
+function renderHUD(){
+  const R = CFG.resources, show = S && !['win','lose'].includes(S.scene);
+  const hud = $('#hud'); if (!show) { hud.innerHTML=''; return; }
+  const f = forecast(), w = warnOf(f);
+  const hearts = Array.from({length:CFG.game.max_hearts}, (_,i) => `<span class="${i>=S.hearts?'gone':''} ${(i>=S.hearts&&S.lostRecently&&i===S.hearts)?'lost':''}">${ICON.heart}</span>`).join('');
+  const item = (k, ic, v, max, title) => `<button class="hi ${S[k]<R[k].low_warning_below?'low':''}" data-card="${k}" data-hud="${k}" data-tip="${title}">${ic}${meterHTML(k, v, max, v<R[k].low_warning_below, w[k])}</button>`;
+  hud.innerHTML = `<div class="hudbar">
+    <div class="hi" style="pointer-events:none">${ICON.cal}Day ${S.day}<small>/ ${CFG.game.days_to_survive}</small></div><i class="sep"></i>
+    ${item('water', ICON.drop, S.water, R.water.max, `Water: ${n1(S.water)} L (liters)`)}<i class="sep"></i>
+    <button class="hi" data-card="power" data-hud="power" data-tip="Power left today: ${free()} of ${budget()} kWh (kilowatt-hours: energy used over time)">${ICON.bolt}${meterHTML('power', free(), budget(), free()<=0)}</button><i class="sep"></i>
+    ${item('food', ICON.apple, S.food, R.food.max, `Food: ${n1(S.food)} kg (kilograms)`)}<i class="sep"></i>
+    ${item('oxygen', ICON.bubble, S.oxygen, R.oxygen.max, `Air (oxygen): ${n1(S.oxygen)} kg (kilograms)`)}<i class="sep"></i>
+    <button class="hearts" data-card="hearts" data-hud="hearts" data-tip="Health: ${S.hearts} of ${CFG.game.max_hearts} hearts">${hearts}</button>
+  </div>`;
+}
+
+const pill = (x, y, cls, inner) => `<div class="pill ${cls}" style="left:${x}%;top:${y}%">${inner}</div>`;
+const badge = (x, y, title) => `<div class="warnb" style="left:${x}%;top:${y}%" title="${title}">!</div>`;
+
+function renderHub(){
+  const o = S.levels.oxygen_room, g = S.levels.greenhouse, f = forecast(), w = warnOf(f);
+  const radCls = S.watch ? (S.prepared ? 'ready' : 'alert') : 'quiet';
+  const radTxt = S.watch ? (S.prepared ? 'READY' : 'ALERT!') : 'QUIET';
+  const m = mod();
+  return `
+    <div class="daychip" title="${m.text||''}">${m.title||''}</div>
+    <button class="hot" data-go="greenhouse" title="Greenhouse" aria-label="Greenhouse" style="left:24.5%;top:15.4%;width:15.4%;height:24.8%"></button>
+    <button class="hot" data-go="oxygen_room" title="Air Room" aria-label="Air Room" style="left:59.8%;top:15.4%;width:15.4%;height:24.8%"></button>
+    <button class="hot ${S.planReady?'':'nudge'}" data-go="power_room" title="Power Room" aria-label="Power Room" style="left:13.6%;top:44.1%;width:15.7%;height:24%"></button>
+    <button class="hot ${S.watch&&!S.prepared?'alert':''}" data-go="radiation_shelter" title="Radiation Shelter" aria-label="Radiation Shelter" style="left:70.6%;top:44.1%;width:15.8%;height:24%"></button>
+    ${pill(32.3,35.3,g,`${small(g==='off'?ICON.bulboff:ICON.bulb,'1.8u')}${g.toUpperCase()}`)}${pill(67.6,35.3,o,`${o.toUpperCase()}`)}
+    ${pill(21.35,62.4,'low',`${small(ICON.bolt,'1.8u')}${meterHTML('power',free(),budget(),false).replace('class="mt','style="width:5u" class="mt')}`)}${pill(78.6,62.9,radCls,radTxt)}
+    ${(w.water||w.food)?badge(38.6,17,'Water or food will run low'):''}${w.oxygen?badge(74,17,'Air will run low'):''}${S.watch&&!S.prepared?badge(85.2,46,'Solar flare!'):''}
+    <button class="nextday ${S.planReady?'':'locked'}" data-act="endday">${S.planReady?'Next Day ▶':'Plan first ⚡'}<small>Day ${S.day} of ${CFG.game.days_to_survive}</small></button>
+    <button class="hot" data-act="about" title="About / credits" aria-label="About" style="left:93.4%;top:3%;width:4.8%;height:8.5%"></button>
+    ${S.watch&&!S.prepared?'<div class="alertbadge">☀ Solar flare warning!</div>':''}
+    <div class="moodb"><img src="assets/moods/${mood().face}.png" alt="Raed's mood"><span>${mood().text}</span></div>
+    <div class="credit">Real solar events from NASA DONKI</div>`;
+}
+
+function tankHTML(kind, v, max, ic, low){
+  const pct = Math.max(0, Math.min(100, v/max*100));
+  const from = S.tp[kind] != null ? S.tp[kind] : pct; S.tp[kind] = pct;
+  return `<div class="tank ${kind} ${low?'low':''}" data-id="tank">${small(ic,'3.6u')}<div class="glass" style="--n:${max/UNIT[kind]}"><i class="lv" style="--to:${pct}%;--from:${from}%"></i></div></div>`;
+}
+const bolts = n => Array(n).fill(small(ICON.bolt,'2u')).join('') || '<span style="opacity:.6">no power</span>';
+const lvlLabel = (room, l) => { const k = Math.round(CFG.rooms[room].levels[l].power_kwh/10); return k ? `<b>${l.toUpperCase()}</b>${bolts(k)}` : `<b>OFF</b>`; };
+function chBtn(room, lvl){
+  const sel = S.levels[room]===lvl, cur = L(room).power_kwh, nxt = CFG.rooms[room].levels[lvl].power_kwh;
+  const dis = !sel && nxt - cur > free();
+  return `<button class="ch ${sel?'sel':''}" data-id="${room+lvl}" data-set="${room}|${lvl}" ${dis?'disabled title="Not enough power left"':''}>${lvlLabel(room,lvl)}</button>`;
+}
+
+const SPOTS = [{x:27.9,y:45.7},{x:38.6,y:66},{x:48.6,y:50.8},{x:64.3,y:48.2}];
+function renderRoom(r){
+  const R = CFG.resources, f = forecast(), w = warnOf(f);
+  let overlay = '', title, tip, ctl, slim = false;
+  if (r==='oxygen_room') {
+    slim = true; title='Air Room'; const fxm = S.fxMol; S.fxMol = null; tip='The air machine makes the air Raed breathes. It needs power, which you choose in the Power Room.';
+    const lvl = S.levels.oxygen_room, dimv = {off:.62, low:.3, high:0}[lvl];
+    overlay = `<div class="dim" style="opacity:${dimv}"></div>${lvl==='off'?'<div class="litlabel">Air machine is OFF</div>':''}${tankHTML('oxygen', S.oxygen, R.oxygen.max, ICON.bubble, S.oxygen < R.oxygen.low_warning_below)}${S.molOpen ? molHTML(fxm) : ''}`;
+    ctl = `<div class="chips"><span class="chip">Machine power ${lvl==='off'?'<b>OFF</b>':bolts(Math.round(L('oxygen_room').power_kwh/10))}</span>
+      <span class="chip ${f.oxygen<S.oxygen?'bad':'good'}">${small(ICON.bubble)} ${f.oxygen<S.oxygen?'▼ less tomorrow':'▲ more tomorrow'}</span>
+      <button class="btn green" data-act="molopen">+ Oxygen</button></div>
+      <div style="font-size:1.3u;font-weight:700">Machine power is set in the Power Room. Tap the floating bubbles to pop them!</div>`;
+  } else if (r==='greenhouse') {
+    slim = true; title='Greenhouse'; tip='Tap + on a plant to water it. Plants use water to make food. Light comes from the Power Room.';
+    const lvl = S.levels.greenhouse, lit = litPlants(), per = perPlant();
+    const dimv = {off:.62, low:.3, high:0}[lvl];
+    const fx = S.fx; S.fx = null;
+    const spots = SPOTS.slice(0, nPlants()).map((p,i) => {
+      const st = S.gh[i];
+      const top = st>0 ? `<div style="position:absolute;left:50%;top:-6.5u;margin-left:-2.5u"><button class="fruit" data-fruit="${i}" aria-label="Pick fruit">${ICON.tomato}${st>1?`<b class="fcount">x${st}</b>`:''}</button></div>` : '';
+      const dark = i >= lit;
+      return `<div class="spot" style="left:${p.x}%;top:${p.y}%">${top}<button class="plus ${S.water<=0?'empty':''} ${dark?'dark':''}" data-plant="${i}" aria-label="Water plant" title="${dark?'No light here':'Water this plant'}">+</button>${dark?'<span class="moon">☾</span>':''}</div>${fx&&fx.plant===i?`<div class="growfx" style="left:${p.x}%;top:${p.y}%"></div>`:''}`;
+    }).join('');
+    overlay = `<div class="dim" style="opacity:${dimv}"></div>${lvl==='off'?'<div class="litlabel">Lights are OFF. Plants cannot grow</div>':''}${spots}${tankHTML('water', S.water, R.water.max, ICON.drop, S.water < R.water.low_warning_below)}`;
+    ctl = `<div class="chips"><span class="chip">Lights ${Array.from({length:nPlants()},(_,i)=>small(i<lit?ICON.bulb:ICON.bulboff)).join('')}</span>
+      <span class="chip">${small(ICON.drop)}→${small(ICON.tomato)} each plant</span>
+      <button class="btn" data-go="power_room">⚡ Change lights</button></div>`;
+  } else if (r==='power_room') {
+    title='Power Room'; tip='Solar panels give limited power each day. Choose where it goes, then save your plan!';
+    const c = CFG.rooms.radiation_shelter.prepare_cost_kwh, O = L('oxygen_room'), G = L('greenhouse');
+    const seg = [['Base',R.power.baseline_use,'#b9a6ee'],['Air',O.power_kwh,'#8fd8f5'],['Plants',G.power_kwh,'#9be3a8'],['Shelter',S.prepared?c:0,'#f58aa6'],['Boost',S.manual*CFG.rooms.oxygen_room.manual.power_kwh,'#ffd36b'],['Free',Math.max(0,free()),'#fff']];
+    const bar = seg.filter(s=>s[1]>0).map(s=>`<div style="width:${s[1]/budget()*100}%;background:${s[2]}"></div>`).join('');
+    const legend = seg.map(s=>`<span><i style="background:${s[2]}"></i>${s[0]}</span>`).join('');
+    const chip = (k,ic) => { const d = f[k]-S[k]; return `<span class="chip ${f[k]<=0?'bad':d<0?'':'good'}">${small(ic)}${d<-0.01?'▼':d>0.01?'▲':'＝'}${f[k]<=0?' runs out!':''}</span>`; };
+    ctl = `<div class="alloc">${bar}</div><div class="legend">${legend}</div>
+      <div class="row"><span class="rowlabel">${small(ICON.bubble,'2.6u')} Air machine</span>${['off','low','high'].map(l=>chBtn('oxygen_room',l)).join('')}</div>
+      <div class="row"><span class="rowlabel">${small(ICON.bulb,'2.6u')} Plant lights</span>${['off','low','high'].map(l=>chBtn('greenhouse',l)).join('')}</div>
+      <div class="chips"><b style="font-size:1.3u">Tomorrow:</b>${chip('oxygen',ICON.bubble)}${chip('water',ICON.drop)}${chip('food',ICON.apple)}
+        <button class="btn green" data-act="plan" style="margin-left:auto">✔ Save plan</button></div>`;
+    // light up the room: brighter = more total power in use
+  } else {
+    title='Radiation Shelter'; const c = CFG.rooms.radiation_shelter.prepare_cost_kwh;
+    if (S.watch) {
+      tip = 'Hurry! Prepare the shelter, then get inside before the sun sparks arrive!';
+      ctl = !S.prepared
+        ? `${evInfo(S.watch.event)}<div class="row" style="align-items:center"><button class="btn big" data-id="prep" data-act="prep">${small(ICON.shield,'2.8u')} Prepare shelter ${bolts(Math.round(c/10))}</button></div>`
+        : `<div class="evinfo">✔ The shelter is ready!</div><div class="row"><button class="btn big green" data-act="inside" style="animation:throb2 .8s infinite">🛡 GET INSIDE!</button></div>`;
+    } else {
+      tip = 'Thick walls block most radiation, so astronauts hide here during a storm.';
+      ctl = `<div class="evinfo">☀ No solar flare warnings today. NASA scientists watch the Sun every day. When a flare is spotted, come back here and get ready.<br><span class="tag">REAL NASA DATA</span>The solar events in this game come from NASA's DONKI.</div>`;
+    }
+  }
+  return `${overlay}<button class="back" data-go="hub">◀ Back to base</button>
+    <div class="panel ${slim?'slim':''}"><img class="guide" src="assets/astronaut.png" alt="Raed"><div class="ptxt"><h2>${title}</h2><p>${tip}</p></div><div class="pctl">${ctl}</div></div>`;
+}
+
+function intro(step){
+  const T = [
+    ['Hi! I\'m Raed!', 'I\'m an astronaut living in a base on the Moon. Can you help me survive for <b>5 days</b>?'],
+    ['Power is limited', 'Every day our solar panels give us a little power. It\'s not enough for everything! Choose what to switch on: the air machine, the plant lights, or the radiation shelter.'],
+    ['Watch the Sun!', 'I need <b>air, water and food</b> to stay healthy. And sometimes the Sun throws out dangerous radiation. This game uses <b>real solar events recorded by NASA</b>.']
+  ];
+  const [h,p] = T[step], last = step === T.length-1;
+  return `<div class="stars"></div><div class="center"><img src="assets/astronaut.png" alt="Raed"><div class="bubble">
+    ${step===0?'<h1>MOONIE</h1>':''}<h2>${h}</h2><p>${p}</p>
+    <div class="dots">${T.map((_,i)=>`<i class="${i===step?'on':''}"></i>`).join('')}</div>
+    <div class="btns">${step>0?`<button class="btn big grey" data-intro="${step-1}">◀ Back</button>`:''}<button class="btn big green" data-intro="${last?'start':step+1}">${last?'Start mission! 🚀':'Next ▶'}</button></div>
+    <div class="small">${CFG.credits.text}</div></div></div>`;
+}
+function pickScreen(){
+  const rank = {mild:0, medium:1, strong:2};
+  const evs = [...EVENTS].sort((a,b) => rank[a.level]-rank[b.level] || new Date(a.flare.date)-new Date(b.flare.date));
+  const lab = {mild:['Mild storm','Easy','easy','1.2u','0.3u'], medium:['Medium storm','Medium','med','2u','0.8u'], strong:['Strong storm','Hard','hard','3u','1.4u']};
+  const cards = evs.map(e => { const l = lab[e.level] || lab.medium, linked = e.sep && e.sep.found_in_donki;
+    return `<button class="pk ${l[2]}" data-pick="${e.id}"><div class="sunic" style="--g:${l[3]};--g2:${l[4]}"></div><b>${l[0]}</b><div class="dt">${fmtDay(e.flare.date)}</div><small>Flare class ${e.flare.class}</small><small>${linked?'NASA recorded sun sparks':'No sun sparks recorded'}</small><span class="lvl">${l[1]}</span></button>`; }).join('');
+  return `<div class="stars"></div><div class="pickwrap"><h2>Pick a real NASA solar storm!</h2><p>These storms really happened. Stronger storms are harder to survive.</p>
+    <div class="picks">${cards}</div>
+    <div class="btns"><button class="btn big grey" data-intro="2">◀ Back</button><button class="btn big" data-pick="rand">🎲 Surprise me</button></div></div>`;
+}
+function endScreen(won){
+  const learned = [...new Set(S.mistakes)];
+  return `<div class="stars"></div><div class="center"><img src="assets/astronaut.png" alt="Raed" style="${won?'':'filter:grayscale(.6)'}"><div class="bubble">
+    <h2>${won?'🎉 Mission complete!':'Oh no! Raed needs a rest.'}</h2>
+    <p>${won?`Raed survived all ${CFG.game.days_to_survive} days with ${S.hearts} ${S.hearts===1?'heart':'hearts'} left!`:`Raed ran out of hearts on day ${S.day}. Real astronauts train again and again, so let\'s try once more!`}</p>
+    ${learned.length?`<p style="font-size:1.6u"><b>What Raed learned:</b></p><ul>${learned.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
+    <p style="font-size:1.5u">☀ Real solar event in this mission: ${fmtDay(S.event.flare.date)} (NASA DONKI).</p>${nasaDetails(S.event)}
+    <button class="btn big green" data-act="restart">Play again ↻</button>
+    <div class="small">${CFG.credits.text}</div></div></div>`;
+}
+
+
+/* ---------- noise sound (whoosh / rumble) ---------- */
+function noise(dur=1, vol=0.12, f0=300, f1=1200, type='lowpass'){
+  if (!SND.on) return;
+  try {
+    if (!SND.ctx) SND.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const c = SND.ctx, n = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i=0;i<n;i++) d[i] = Math.random()*2-1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f0, c.currentTime); fl.frequency.linearRampToValueAtTime(f1, c.currentTime + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.linearRampToValueAtTime(vol, c.currentTime + dur*0.3); g.gain.linearRampToValueAtTime(0.0001, c.currentTime + dur);
+    src.connect(fl); fl.connect(g); g.connect(c.destination); src.start();
+  } catch(_) {}
+}
+
+/* ---------- storm sweep: sun sparks fly across the screen ---------- */
+function stormSweep(arrives, done){
+  if (!arrives) { done(); return; }
+  const el = document.createElement('div'); el.id = 'sweep';
+  let h = '<div class="band"></div>';
+  for (let i=0;i<70;i++) h += `<i style="--y:${(Math.random()*96).toFixed(1)}%;--t:${(Math.random()*1.6).toFixed(2)}s;--d:${(0.9+Math.random()*1.1).toFixed(2)}s"></i>`;
+  el.innerHTML = h + '<div class="lbl">☀ The storm is passing!</div>';
+  $('#stage').appendChild(el);
+  noise(3, 0.16, 200, 2600); noise(3, 0.06, 1500, 5000, 'highpass');
+  for (let i=0;i<14;i++) tone(1200 + Math.random()*2500, 0.04, 'square', 0.025, 0.3 + i*0.18);
+  setTimeout(() => { el.remove(); done(); }, 3500);
+}
+
+/* ---------- launch movie (about 30 s, skippable) ---------- */
+const ROCKET_SVG = `<svg viewBox="0 0 60 130"><g class="flame"><path d="M18 100 Q30 150 42 100Z" fill="#ff7a1a"/><path d="M23 100 Q30 135 37 100Z" fill="#ffd34a"/></g>
+  <path d="M10 92 L-2 118 L18 104Z M50 92 L62 118 L42 104Z" fill="#ef4b4b" stroke="#2b2350" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M30 2 Q54 28 50 98 L10 98 Q6 28 30 2Z" fill="#fff4ee" stroke="#2b2350" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M30 2 Q42 14 46 34 L14 34 Q18 14 30 2Z" fill="#ef4b4b" stroke="#2b2350" stroke-width="3.5" stroke-linejoin="round"/>
+  <circle cx="30" cy="56" r="9" fill="#8fd8f5" stroke="#2b2350" stroke-width="3.5"/><circle cx="27" cy="53" r="2.5" fill="#fff"/>
+  <rect x="12" y="84" width="36" height="7" fill="#b9a6ee" stroke="#2b2350" stroke-width="2.5"/></svg>`;
+let movieTimers = [];
+function launchMovie(done){
+  const old = $('#movie'); if (old) old.remove();
+  const m = document.createElement('div'); m.id = 'movie';
+  $('#stage').appendChild(m);
+  let finished = false;
+  const T = (ms, fn) => movieTimers.push(setTimeout(fn, ms));
+  const end = () => { if (finished) return; finished = true; movieTimers.forEach(clearTimeout); movieTimers = [];
+    stopVoice();
+    m.remove(); done(); };
+  const scene = (html, cap) => { m.querySelectorAll('.sc,.cap').forEach(x=>x.remove());
+    m.insertAdjacentHTML('beforeend', `<div class="sc">${html}</div>` + (cap?`<div class="cap">${cap}</div>`:'')); };
+  m.innerHTML = '<button class="btn grey sk">Skip ▶</button>';
+  m.querySelector('.sk').onclick = end;
+  scene(`<div class="stars2 fall"></div><div class="earth" style="animation-duration:5s"></div><div class="moonbig" style="animation-duration:5s"></div>
+    <img src="assets/astronaut.png" alt="" style="position:absolute;right:6%;bottom:6u;height:30u;z-index:3;animation:bob 1s ease-in-out infinite">
+    <div class="rocket cruise" style="animation-duration:5s">${ROCKET_SVG}</div>`, "We're going to the Moon!");
+  say("We're going to the Moon!");
+  noise(4.5, 0.12, 150, 900); tone(660,.15,'triangle',.07); tone(990,.25,'triangle',.07,.15);
+  T(4000, () => { m.insertAdjacentHTML('beforeend','<div class="fadeout"></div>'); });
+  T(5000, end);
+}
+
+let introStep = 0;
+function render(){
+  const bg = $('#bg'), layer = $('#layer');
+  if (!S) { bg.style.display='none'; layer.innerHTML = introStep==='pick' ? pickScreen() : intro(introStep); $('#hud').innerHTML=''; return; }
+  const sc = S.scene; let html = '';
+  const tint = mod().tint || '';
+  if (sc==='hub') { bg.src='assets/hub.jpg'; bg.style.display='block'; bg.style.objectPosition='50% 50%'; bg.style.filter=tint; html = renderHub(); }
+  else if (sc.startsWith('room:')) { const r=sc.slice(5); bg.src=ROOMS[r].img; bg.style.display='block'; bg.style.objectPosition=ROOMS[r].pos||'50% 50%'; bg.style.filter=tint; html = renderRoom(r); }
+  else { bg.style.display='none'; html = endScreen(sc==='win'); }
+  layer.innerHTML = html;
+  renderHUD();
+}
+
+$('#layer').addEventListener('click', e => {
+  const bub = e.target.closest('.bub'); if (bub) { sfx('pop'); bub.classList.add('pop'); setTimeout(()=>bub.remove(),250); return; }
+  const t = e.target.closest('button'); if (!t) return;
+  const d = t.dataset;
+  if (d.intro) {
+    if (d.intro==='start') { introStep='pick'; render(); }
+    else { introStep=+d.intro; render(); } }
+  else if (d.pick) { const pk = d.pick; launchMovie(() => { introStep=0; newGame(pk==='rand' ? null : pk); render();
+      modal({title:'Your mission', guide:true, body:`<p>Survive <b>${CFG.game.days_to_survive} days</b>. First, open the <b>Power Room</b> ⚡ and choose a plan. Then press <b>Next Day</b>.</p><p>Tip: tap the icons at the top to learn about them!</p>`, buttons:[{label:"Let's go!", fn:()=>cardOnce('hearts')}]}); }); }
+  else if (d.o) splitO(+d.o);
+  else if (d.act==='molopen') { S.molOpen = true; render(); }
+  else if (d.act==='molclose') { S.molOpen = false; render(); }
+  else if (d.act==='molmore') { S.mol = [false,false]; S.molRounds++; render(); }
+  else if (d.plant) waterPlant(+d.plant);
+  else if (d.fruit) pickFruit(+d.fruit);
+  else if (d.go) go(d.go==='hub' ? 'hub' : 'room:'+d.go);
+  else if (d.set) { const [r,l]=d.set.split('|'); setLevel(r,l); }
+  else if (d.act==='prep') togglePrep();
+  else if (d.act==='plan') { S.planReady = true; const to = S.ret || 'hub'; S.ret = null; go(to); if (S.pendingStorm && !S.stormDone && !S.watch) triggerStorm(); }
+  else if (d.act==='inside') resolveStorm(true);
+  else if (d.act==='endday') nextDayClicked();
+  else if (d.act==='restart') { S=null; introStep=0; render(); }
+  else if (d.act==='about') modal({title:'About MOONIE', body:`<p>${CFG.credits.text}</p><p style="font-size:1.4u">Solar events: ${CFG.credits.solar_events}. Oxygen and water values are based on NASA life-support planning figures; everything else is a simplified game number.</p>`});
+});
+$('#hud').addEventListener('click', e => { const b=e.target.closest('[data-card]'); if (b) showCard(b.dataset.card); });
+$('#stage').addEventListener('click', e => { if (e.target.closest('[data-gostorm]')) go('room:radiation_shelter'); });
+document.addEventListener('keydown', e => { if (e.key==='Escape' && S && S.scene.startsWith('room:') && !current) go('hub'); });
+
+/* oxygen bubbles: more power = more bubbles */
+setInterval(() => {
+  if (!S || S.scene !== 'room:oxygen_room') return;
+  const p = {off:0, low:.3, high:.75}[S.levels.oxygen_room];
+  if (Math.random() > p) return;
+  const b = document.createElement('button'); b.className = 'bub';
+  b.style.left = (47 + Math.random()*14) + '%'; b.style.top = (58 + Math.random()*8) + '%';
+  b.setAttribute('aria-label','bubble'); $('#layer').appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+}, 450);
+
+async function load(){
+  try {
+    const [c,v] = await Promise.all(['game-config.json','solar-events.json'].map(f => fetch(f).then(r => { if(!r.ok) throw 0; return r.json(); })));
+    CFG=c; EVENTS=v;
+  } catch(_) {
+    CFG = JSON.parse($('#cfg-embedded').textContent); EVENTS = JSON.parse($('#ev-embedded').textContent);
+  }
+  render();
+  if (params().get('skip')) { newGame(); render(); }
+}
+load();
+</script>
+</body>
+</html>
