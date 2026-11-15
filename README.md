@@ -74,7 +74,6 @@ HTML, CSS and JavaScript (no backend), Web Audio for sound effects, NASA DONKI d
 
 - **Code and scripts:** Claude (Anthropic) helped write and test the game code and the presentation script. The team directed the design and tested the result.
 - **Audio:** Raed's voice lines are SI-generated with Google Gemini text-to-speech.
-- **Images:** [team: list any SI-generated art here, or write "none"].
 - No NASA logos, flags or mission identifiers are used.
 
 ## Next steps
